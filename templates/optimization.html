@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}Optimization - FishCast AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-cogs me-2"></i>Optimization
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#optimizationModal">
+            <i class="fas fa-play me-1"></i>Run New Optimization
+        </button>
+    </div>
+</div>
+
+<!-- Optimization Modal -->
+<div class="modal fade" id="optimizationModal" tabindex="-1" aria-labelledby="optimizationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="optimizationModalLabel">
+                    <i class="fas fa-cogs me-2"></i>Run NSGA-III Optimization
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="optimizationForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="optimizationDataset" class="form-label">Select Dataset</label>
+                        <select class="form-select" id="optimizationDataset" name="dataset_id" required>
+                            <option value="">Choose a dataset...</option>
+                            {% for dataset in datasets %}
+                                <option value="{{ dataset.id }}">{{ dataset.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="populationSize" class="form-label">Population Size</label>
+                        <input type="number" class="form-control" id="populationSize" name="population_size" value="40" min="10" max="200">
+                        <div class="form-text">Number of individuals in the population (10-200)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="generations" class="form-label">Number of Generations</label>
+                        <input type="number" class="form-control" id="generations" name="generations" value="100" min="10" max="500">
+                        <div class="form-text">Number of generations to evolve (10-500)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">Run Optimization</span>
+                        <span class="loading spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Optimization Results -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-list me-2"></i>Optimization Results
+    </div>
+    <div class="card-body">
+        {% if optimizations %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Dataset</th>
+                            <th>Best Total Stock</th>
+                            <th>Best MSE</th>
+                            <th>Population Size</th>
+                            <th>Generations</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for optimization in optimizations %}
+                        <tr>
+                            <td>
+                                <i class="fas fa-file-csv me-2 text-primary"></i>
+                                {{ optimization.dataset.name }}
+                            </td>
+                            <td>
+                                <span class="text-success fw-bold">{{ optimization.best_total_stok|floatformat:2 }}</span>
+                            </td>
+                            <td>
+                                <span class="text-info fw-bold">{{ optimization.best_mse|floatformat:4 }}</span>
+                            </td>
+                            <td>{{ optimization.population_size }}</td>
+                            <td>{{ optimization.generations }}</td>
+                            <td>{{ optimization.created_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewOptimization({{ optimization.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="showOptimizationChart({{ optimization.id }})">
+                                        <i class="fas fa-chart-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="exportOptimization({{ optimization.id }})">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteOptimization({{ optimization.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-cogs fa-4x text-muted mb-4"></i>
+                <h4 class="text-muted">No optimization results yet</h4>
+                <p class="text-muted">Run your first NSGA-III optimization to see results</p>
+                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#optimizationModal">
+                    <i class="fas fa-play me-2"></i>Run Your First Optimization
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Optimization Chart Modal -->
+<div class="modal fade" id="optimizationChartModal" tabindex="-1" aria-labelledby="optimizationChartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="optimizationChartModalLabel">
+                    <i class="fas fa-chart-line me-2"></i>Optimization Results
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="optimizationChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('optimizationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    showLoading(submitBtn);
+    
+    fetch('/api/optimize/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            dataset_id: formData.get('dataset_id'),
+            population_size: parseInt(formData.get('population_size')),
+            generations: parseInt(formData.get('generations'))
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading(submitBtn);
+        if (data.message) {
+            showAlert('Optimization started successfully!', 'success');
+            setTimeout(() => location.reload(), 3000);
+        } else {
+            showAlert('Error running optimization: ' + (data.error || 'Unknown error'), 'danger');
+        }
+    })
+    .catch(error => {
+        hideLoading(submitBtn);
+        showAlert('Error running optimization: ' + error.message, 'danger');
+    });
+});
+
+function viewOptimization(optimizationId) {
+    window.location.href = `/api/optimization-results/${optimizationId}/`;
+}
+
+function showOptimizationChart(optimizationId) {
+    fetch(`/api/optimization-results/${optimizationId}/`)
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('optimizationChart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.optimizationChart) {
+            window.optimizationChart.destroy();
+        }
+        
+        // Extract data for Pareto front visualization
+        const solutions = data.solutions;
+        const totalStocks = solutions.map(s => s.total_stok);
+        const mseValues = solutions.map(s => s.mse);
+        
+        window.optimizationChart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'All Solutions',
+                        data: solutions.map((s, i) => ({
+                            x: s.total_stok,
+                            y: s.mse
+                        })),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Best Solution',
+                        data: [{
+                            x: data.best_solution.total_stok,
+                            y: data.best_solution.mse
+                        }],
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        pointRadius: 8,
+                        pointStyle: 'star'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'NSGA-III Optimization Results - Pareto Front'
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Total Stock'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'MSE'
+                        }
+                    }
+                }
+            }
+        });
+        
+        $('#optimizationChartModal').modal('show');
+    })
+    .catch(error => {
+        showAlert('Error loading optimization chart: ' + error.message, 'danger');
+    });
+}
+
+function exportOptimization(optimizationId) {
+    // Implementation for exporting optimization results
+    showAlert('Export functionality coming soon!', 'info');
+}
+
+function deleteOptimization(optimizationId) {
+    if (confirm('Are you sure you want to delete this optimization result? This action cannot be undone.')) {
+        fetch(`/api/optimization-results/${optimizationId}/`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showAlert('Optimization result deleted successfully!', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert('Error deleting optimization result', 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('Error deleting optimization result: ' + error.message, 'danger');
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - FishCast AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h3>{{ total_datasets }}</h3>
+                    <p>Total Datasets</p>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-database fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h3>{{ total_predictions }}</h3>
+                    <p>Total Predictions</p>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-chart-line fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h3>{{ total_optimizations }}</h3>
+                    <p>Optimizations</p>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-cogs fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h3>{{ total_correlations }}</h3>
+                    <p>Correlation Analyses</p>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-chart-bar fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+    <!-- Recent Datasets -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-database me-2"></i>Recent Datasets
+            </div>
+            <div class="card-body">
+                {% if recent_datasets %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Uploaded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dataset in recent_datasets %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-csv me-2 text-primary"></i>
+                                        {{ dataset.name }}
+                                    </td>
+                                    <td>{{ dataset.uploaded_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewDataset({{ dataset.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No datasets uploaded yet</p>
+                        <a href="{% url 'datasets' %}" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Upload Dataset
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Predictions -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>Recent Predictions
+            </div>
+            <div class="card-body">
+                {% if recent_predictions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Dataset</th>
+                                    <th>MSE</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prediction in recent_predictions %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary">{{ prediction.model_type }}</span>
+                                    </td>
+                                    <td>{{ prediction.dataset.name }}</td>
+                                    <td>{{ prediction.mse|floatformat:4 }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-success" onclick="viewPrediction({{ prediction.id }})">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No predictions made yet</p>
+                        <a href="{% url 'predictions' %}" class="btn btn-primary">
+                            <i class="fas fa-play me-1"></i>Run Prediction
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i>Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'datasets' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-upload fa-2x mb-2"></i><br>
+                            Upload Dataset
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'predictions' %}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-chart-line fa-2x mb-2"></i><br>
+                            Run Prediction
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'optimization' %}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-cogs fa-2x mb-2"></i><br>
+                            Run Optimization
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'correlation' %}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
+                            Correlation Analysis
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewDataset(datasetId) {
+    window.location.href = `/api/datasets/${datasetId}/`;
+}
+
+function viewPrediction(predictionId) {
+    window.location.href = `/api/predictions/${predictionId}/`;
+}
+
+// Auto-refresh dashboard every 30 seconds
+setInterval(function() {
+    // You can add AJAX call here to refresh data without full page reload
+}, 30000);
+</script>
+{% endblock %} 
