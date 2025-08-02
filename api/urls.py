@@ -12,6 +12,7 @@ urlpatterns = [
     # Prediction endpoints
     path('predict/', views.PredictionView.as_view(), name='predict'),
     path('predictions/', views.PredictionListView.as_view(), name='prediction-list'),
+    path('predictions/<int:prediction_id>/', views.PredictionDetailView.as_view(), name='prediction-detail'),
     
     # Optimization endpoints
     path('optimize/', views.OptimizationView.as_view(), name='optimize'),

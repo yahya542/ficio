@@ -24,7 +24,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     
-    # Dashboard URLs
+    # Authentication URLs
+    path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
+    path('logout/', views.logout_view, name='logout'),
+    
+    # Dashboard URLs (require login)
     path('', views.dashboard, name='dashboard'),
     path('datasets/', views.datasets_view, name='datasets'),
     path('predictions/', views.predictions_view, name='predictions'),

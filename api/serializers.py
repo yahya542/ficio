@@ -1,35 +1,30 @@
 from rest_framework import serializers
-from .models import Dataset, Prediction, OptimizationResult, CorrelationAnalysis
+from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis
+
+class ShipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ship
+        fields = '__all__'
 
 class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dataset
-        fields = ['id', 'name', 'file', 'uploaded_at', 'processed_data', 'description']
-        read_only_fields = ['id', 'uploaded_at', 'processed_data']
+        fields = '__all__'
 
 class PredictionSerializer(serializers.ModelSerializer):
-    dataset_name = serializers.CharField(source='dataset.name', read_only=True)
-    
     class Meta:
         model = Prediction
-        fields = ['id', 'dataset', 'dataset_name', 'model_type', 'predictions', 'actual_values', 'mse', 'mae', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = '__all__'
 
 class OptimizationResultSerializer(serializers.ModelSerializer):
-    dataset_name = serializers.CharField(source='dataset.name', read_only=True)
-    
     class Meta:
         model = OptimizationResult
-        fields = ['id', 'dataset', 'dataset_name', 'solutions', 'best_solution', 'best_total_stok', 'best_mse', 'population_size', 'generations', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = '__all__'
 
 class CorrelationAnalysisSerializer(serializers.ModelSerializer):
-    dataset_name = serializers.CharField(source='dataset.name', read_only=True)
-    
     class Meta:
         model = CorrelationAnalysis
-        fields = ['id', 'dataset', 'dataset_name', 'correlation_matrix', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = '__all__'
 
 class PredictionRequestSerializer(serializers.Serializer):
     dataset_id = serializers.IntegerField()
