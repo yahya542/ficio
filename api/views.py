@@ -1,132 +1,259 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.views import View
 from rest_framework import status
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Dataset, Prediction, OptimizationResult, CorrelationAnalysis
-from .serializers import DatasetSerializer, PredictionSerializer, OptimizationResultSerializer, CorrelationAnalysisSerializer
-import json
+from rest_framework.decorators import api_view
+from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis
+from .serializers import ShipSerializer, DatasetSerializer, PredictionSerializer, OptimizationResultSerializer, CorrelationAnalysisSerializer
+from .ml_models import ml_engine
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 
-# Dashboard Views
+# Authentication Views
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'Selamat datang, {user.username}!')
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Username atau password salah!')
+    return render(request, 'login.html')
+
+def register_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        email = request.POST.get('email')
+        ship_name = request.POST.get('ship_name')
+        ship_id = request.POST.get('ship_id')
+        captain_name = request.POST.get('captain_name')
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username sudah digunakan!')
+            return render(request, 'register.html')
+        
+        if Ship.objects.filter(ship_id=ship_id).exists():
+            messages.error(request, 'ID Kapal sudah terdaftar!')
+            return render(request, 'register.html')
+        
+        user = User.objects.create_user(username=username, password=password, email=email)
+        Ship.objects.create(user=user, ship_name=ship_name, ship_id=ship_id, captain_name=captain_name)
+        messages.success(request, 'Registrasi berhasil! Silakan login.')
+        return redirect('login')
+    return render(request, 'register.html')
+
+def logout_view(request):
+    logout(request)
+    messages.success(request, 'Anda telah logout.')
+    return redirect('login')
+
+@login_required
 def dashboard(request):
-    """Main dashboard view"""
-    # Get statistics
-    total_datasets = Dataset.objects.count()
-    total_predictions = Prediction.objects.count()
-    total_optimizations = OptimizationResult.objects.count()
-    total_correlations = CorrelationAnalysis.objects.count()
-    
-    # Get recent activities
-    recent_datasets = Dataset.objects.all()[:5]
-    recent_predictions = Prediction.objects.select_related('dataset').all()[:5]
-    recent_optimizations = OptimizationResult.objects.select_related('dataset').all()[:5]
+    try:
+        ship = request.user.ship
+    except Ship.DoesNotExist:
+        ship = None
     
     context = {
-        'total_datasets': total_datasets,
-        'total_predictions': total_predictions,
-        'total_optimizations': total_optimizations,
-        'total_correlations': total_correlations,
-        'recent_datasets': recent_datasets,
-        'recent_predictions': recent_predictions,
-        'recent_optimizations': recent_optimizations,
+        'ship': ship,
+        'total_datasets': Dataset.objects.filter(user=request.user).count(),
+        'total_predictions': Prediction.objects.filter(user=request.user).count(),
+        'total_optimizations': OptimizationResult.objects.filter(user=request.user).count(),
+        'total_correlations': CorrelationAnalysis.objects.filter(user=request.user).count(),
+        'recent_datasets': Dataset.objects.filter(user=request.user)[:5],
+        'recent_predictions': Prediction.objects.filter(user=request.user)[:5],
+        'recent_optimizations': OptimizationResult.objects.filter(user=request.user)[:5],
     }
     return render(request, 'dashboard.html', context)
 
+@login_required
 def datasets_view(request):
-    """Datasets management view"""
-    datasets = Dataset.objects.all().order_by('-uploaded_at')
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        file = request.FILES.get('file')
+        description = request.POST.get('description', '')
+        
+        if name and file:
+            if not file.name.endswith('.csv'):
+                messages.error(request, 'Please upload a CSV file.')
+                return redirect('datasets')
+            
+            Dataset.objects.create(name=name, file=file, description=description, user=request.user)
+            messages.success(request, f'Dataset "{name}" uploaded successfully!')
+            return redirect('datasets')
+        else:
+            messages.error(request, 'Please provide a name and file.')
+    datasets = Dataset.objects.filter(user=request.user).order_by('-uploaded_at')
     return render(request, 'datasets.html', {'datasets': datasets})
 
+@login_required
 def predictions_view(request):
-    """Predictions management view"""
-    predictions = Prediction.objects.select_related('dataset').all().order_by('-created_at')
-    datasets = Dataset.objects.all().order_by('name')
+    predictions = Prediction.objects.filter(user=request.user).select_related('dataset').order_by('-created_at')
+    datasets = Dataset.objects.filter(user=request.user).order_by('name')
     return render(request, 'predictions.html', {'predictions': predictions, 'datasets': datasets})
 
+@login_required
 def optimization_view(request):
-    """Optimization management view"""
-    optimizations = OptimizationResult.objects.select_related('dataset').all().order_by('-created_at')
-    datasets = Dataset.objects.all().order_by('name')
+    optimizations = OptimizationResult.objects.filter(user=request.user).select_related('dataset').order_by('-created_at')
+    datasets = Dataset.objects.filter(user=request.user).order_by('name')
     return render(request, 'optimization.html', {'optimizations': optimizations, 'datasets': datasets})
 
+@login_required
 def correlation_view(request):
-    """Correlation analysis view"""
-    correlations = CorrelationAnalysis.objects.select_related('dataset').all().order_by('-created_at')
-    datasets = Dataset.objects.all().order_by('name')
+    correlations = CorrelationAnalysis.objects.filter(user=request.user).select_related('dataset').order_by('-created_at')
+    datasets = Dataset.objects.filter(user=request.user).order_by('name')
     return render(request, 'correlation.html', {'correlations': correlations, 'datasets': datasets})
 
-# API Views (existing)
 @api_view(['GET'])
 def health_check(request):
     return Response({'status': 'healthy'}, status=status.HTTP_200_OK)
 
+# --- API CLASS BASED VIEWS (CSRF EXEMPTED) ---
+@method_decorator(csrf_exempt, name='dispatch')
 class DatasetViewSet(APIView):
     def get(self, request):
-        datasets = Dataset.objects.all()
+        datasets = Dataset.objects.filter(user=request.user) if request.user.is_authenticated else Dataset.objects.all()
         serializer = DatasetSerializer(datasets, many=True)
         return Response(serializer.data)
     
     def post(self, request):
         serializer = DatasetSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=request.user if request.user.is_authenticated else None)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class DatasetDetailView(APIView):
     def get(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id)
+        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
         serializer = DatasetSerializer(dataset)
         return Response(serializer.data)
     
     def delete(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id)
+        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
         dataset.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+@method_decorator(csrf_exempt, name='dispatch')
+class DatasetPreviewView(APIView):
+    def get(self, request, dataset_id):
+        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
+        try:
+            df = pd.read_csv(dataset.file.path)
+            data = df.head(10).to_dict('records')
+            return Response({
+                'data': data,
+                'total_rows': len(df),
+                'columns': list(df.columns),
+                'dataset_name': dataset.name
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DatasetDownloadView(APIView):
+    def get(self, request, dataset_id):
+        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
+        try:
+            with open(dataset.file.path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{dataset.name}.csv"'
+                return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@method_decorator(csrf_exempt, name='dispatch')
 class PredictionView(APIView):
     def post(self, request):
-        # Implementation for prediction
-        return Response({'message': 'Prediction endpoint'}, status=status.HTTP_200_OK)
+        try:
+            dataset_id = request.data.get('dataset_id')
+            models_to_train = request.data.get('models', ['Linear'])
+            
+            if not dataset_id:
+                return Response({'error': 'Dataset ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
+            dataset_file = dataset.file.path
+            
+            results = ml_engine.train_and_predict(dataset_id, dataset_file, models_to_train)
+            saved_predictions = []
+            for model_name, result in results.items():
+                prediction = Prediction.objects.create(
+                    dataset=dataset,
+                    user=request.user if request.user.is_authenticated else None,
+                    model_type=model_name,
+                    predictions=result['predictions'],
+                    actual_values=result['actual_values'],
+                    mse=result['mse'],
+                    mae=result['mae']
+                )
+                saved_predictions.append(prediction)
+            
+            return Response({
+                'message': f'Successfully ran predictions for {len(saved_predictions)} models',
+                'predictions_created': len(saved_predictions),
+                'models_trained': list(results.keys())
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PredictionListView(APIView):
     def get(self, request):
-        predictions = Prediction.objects.all()
+        predictions = Prediction.objects.filter(user=request.user) if request.user.is_authenticated else Prediction.objects.all()
         serializer = PredictionSerializer(predictions, many=True)
         return Response(serializer.data)
 
+@method_decorator(csrf_exempt, name='dispatch')
+class PredictionDetailView(APIView):
+    def get(self, request, prediction_id):
+        prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
+        serializer = PredictionSerializer(prediction)
+        return Response(serializer.data)
+    
+    def delete(self, request, prediction_id):
+        prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
+        prediction.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+@method_decorator(csrf_exempt, name='dispatch')
 class OptimizationView(APIView):
     def post(self, request):
-        # Implementation for optimization
         return Response({'message': 'Optimization endpoint'}, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class OptimizationListView(APIView):
     def get(self, request):
-        optimizations = OptimizationResult.objects.all()
+        optimizations = OptimizationResult.objects.filter(user=request.user) if request.user.is_authenticated else OptimizationResult.objects.all()
         serializer = OptimizationResultSerializer(optimizations, many=True)
         return Response(serializer.data)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CorrelationView(APIView):
     def post(self, request):
-        # Implementation for correlation analysis
         return Response({'message': 'Correlation endpoint'}, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CorrelationListView(APIView):
     def get(self, request):
-        correlations = CorrelationAnalysis.objects.all()
+        correlations = CorrelationAnalysis.objects.filter(user=request.user) if request.user.is_authenticated else CorrelationAnalysis.objects.all()
         serializer = CorrelationAnalysisSerializer(correlations, many=True)
         return Response(serializer.data)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ExportView(APIView):
     def get(self, request, prediction_id):
-        prediction = get_object_or_404(Prediction, id=prediction_id)
-        # Implementation for export
+        prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
         return Response({'message': 'Export endpoint'}, status=status.HTTP_200_OK)

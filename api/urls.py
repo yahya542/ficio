@@ -8,10 +8,13 @@ urlpatterns = [
     # Dataset endpoints
     path('datasets/', views.DatasetViewSet.as_view(), name='dataset-list'),
     path('datasets/<int:dataset_id>/', views.DatasetDetailView.as_view(), name='dataset-detail'),
+    path('datasets/<int:dataset_id>/preview/', views.DatasetPreviewView.as_view(), name='dataset-preview'),
+    path('datasets/<int:dataset_id>/download/', views.DatasetDownloadView.as_view(), name='dataset-download'),
     
     # Prediction endpoints
     path('predict/', views.PredictionView.as_view(), name='predict'),
     path('predictions/', views.PredictionListView.as_view(), name='prediction-list'),
+    path('predictions/<int:prediction_id>/', views.PredictionDetailView.as_view(), name='prediction-detail'),
     
     # Optimization endpoints
     path('optimize/', views.OptimizationView.as_view(), name='optimize'),
