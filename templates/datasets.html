@@ -24,7 +24,8 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="uploadForm" enctype="multipart/form-data">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="datasetName" class="form-label">Dataset Name</label>
@@ -33,18 +34,17 @@
                     <div class="mb-3">
                         <label for="datasetFile" class="form-label">CSV File</label>
                         <input type="file" class="form-control" id="datasetFile" name="file" accept=".csv" required>
-                        <div class="form-text">Upload a CSV file with your dataset</div>
+                        <div class="form-text">Upload file CSV dengan data perikanan</div>
                     </div>
                     <div class="mb-3">
-                        <label for="datasetDescription" class="form-label">Description (Optional)</label>
+                        <label for="datasetDescription" class="form-label">Description</label>
                         <textarea class="form-control" id="datasetDescription" name="description" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">
-                        <span class="btn-text">Upload</span>
-                        <span class="loading spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <i class="fas fa-upload me-2"></i>Upload Dataset
                     </button>
                 </div>
             </form>
@@ -52,10 +52,32 @@
     </div>
 </div>
 
+<!-- Dataset View Modal -->
+<div class="modal fade" id="datasetViewModal" tabindex="-1" aria-labelledby="datasetViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="datasetViewModalLabel">
+                    <i class="fas fa-table me-2"></i>Dataset Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="datasetInfo" class="mb-4">
+                    <!-- Dataset info will be loaded here -->
+                </div>
+                <div id="datasetTable" class="table-responsive">
+                    <!-- Dataset table will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Datasets List -->
 <div class="card">
     <div class="card-header">
-        <i class="fas fa-list me-2"></i>Uploaded Datasets
+        <i class="fas fa-list me-2"></i>Your Datasets
     </div>
     <div class="card-body">
         {% if datasets %}
@@ -64,9 +86,9 @@
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Description</th>
+                            <th>File</th>
                             <th>Uploaded</th>
-                            <th>File Size</th>
+                            <th>Description</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -74,9 +96,13 @@
                         {% for dataset in datasets %}
                         <tr>
                             <td>
-                                <i class="fas fa-file-csv me-2 text-primary"></i>
-                                {{ dataset.name }}
+                                <strong>{{ dataset.name }}</strong>
                             </td>
+                            <td>
+                                <i class="fas fa-file-csv me-2 text-primary"></i>
+                                {{ dataset.file.name|slice:"9:" }}
+                            </td>
+                            <td>{{ dataset.uploaded_at|date:"M d, Y H:i" }}</td>
                             <td>
                                 {% if dataset.description %}
                                     {{ dataset.description|truncatechars:50 }}
@@ -84,27 +110,13 @@
                                     <span class="text-muted">No description</span>
                                 {% endif %}
                             </td>
-                            <td>{{ dataset.uploaded_at|date:"M d, Y H:i" }}</td>
-                            <td>
-                                {% if dataset.file %}
-                                    {{ dataset.file.size|filesizeformat }}
-                                {% else %}
-                                    <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-outline-primary" onclick="viewDataset({{ dataset.id }})">
-                                        <i class="fas fa-eye"></i>
+                                        <i class="fas fa-eye"></i> View
                                     </button>
-                                    <button class="btn btn-sm btn-outline-success" onclick="runPrediction({{ dataset.id }})">
-                                        <i class="fas fa-chart-line"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-warning" onclick="runOptimization({{ dataset.id }})">
-                                        <i class="fas fa-cogs"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-info" onclick="runCorrelation({{ dataset.id }})">
-                                        <i class="fas fa-chart-bar"></i>
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadDataset({{ dataset.id }})">
+                                        <i class="fas fa-download"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger" onclick="deleteDataset({{ dataset.id }})">
                                         <i class="fas fa-trash"></i>
@@ -120,7 +132,7 @@
             <div class="text-center py-5">
                 <i class="fas fa-database fa-4x text-muted mb-4"></i>
                 <h4 class="text-muted">No datasets uploaded yet</h4>
-                <p class="text-muted">Upload your first dataset to get started with FishCast AI</p>
+                <p class="text-muted">Upload your first dataset to get started</p>
                 <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#uploadModal">
                     <i class="fas fa-upload me-2"></i>Upload Your First Dataset
                 </button>
@@ -132,117 +144,86 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const submitBtn = this.querySelector('button[type="submit"]');
-    
-    showLoading(submitBtn);
-    
-    fetch('/api/datasets/', {
-        method: 'POST',
-        body: formData
-    })
+function viewDataset(datasetId) {
+    fetch(`/api/datasets/${datasetId}/`)
     .then(response => response.json())
     .then(data => {
-        hideLoading(submitBtn);
-        if (data.id) {
-            showAlert('Dataset uploaded successfully!', 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showAlert('Error uploading dataset: ' + (data.error || 'Unknown error'), 'danger');
-        }
+        // Load dataset info
+        document.getElementById('datasetInfo').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Dataset Information</h5>
+                    <table class="table table-sm">
+                        <tr><td><strong>Name:</strong></td><td>${data.name}</td></tr>
+                        <tr><td><strong>File:</strong></td><td>${data.file}</td></tr>
+                        <tr><td><strong>Uploaded:</strong></td><td>${new Date(data.uploaded_at).toLocaleString()}</td></tr>
+                        <tr><td><strong>Description:</strong></td><td>${data.description || 'No description'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Data Preview</h5>
+                    <div id="dataPreview">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading data preview...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Load data preview
+        fetch(`/api/datasets/${datasetId}/preview/`)
+        .then(response => response.json())
+        .then(previewData => {
+            if (previewData.data && previewData.data.length > 0) {
+                const headers = Object.keys(previewData.data[0]);
+                let tableHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    ${headers.map(header => `<th>${header}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                previewData.data.slice(0, 10).forEach(row => {
+                    tableHTML += '<tr>';
+                    headers.forEach(header => {
+                        tableHTML += `<td>${row[header] || ''}</td>`;
+                    });
+                    tableHTML += '</tr>';
+                });
+                
+                tableHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Showing first 10 rows of ${previewData.total_rows} total rows</small>
+                `;
+                
+                document.getElementById('dataPreview').innerHTML = tableHTML;
+            } else {
+                document.getElementById('dataPreview').innerHTML = '<p class="text-muted">No data available</p>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('dataPreview').innerHTML = '<p class="text-danger">Error loading data preview</p>';
+        });
+        
+        $('#datasetViewModal').modal('show');
     })
     .catch(error => {
-        hideLoading(submitBtn);
-        showAlert('Error uploading dataset: ' + error.message, 'danger');
+        showAlert('Error loading dataset: ' + error.message, 'danger');
     });
-});
-
-function viewDataset(datasetId) {
-    window.location.href = `/api/datasets/${datasetId}/`;
 }
 
-function runPrediction(datasetId) {
-    if (confirm('Run prediction on this dataset?')) {
-        fetch('/api/predict/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                dataset_id: datasetId,
-                models: ['Linear', 'LSTM', 'GRU']
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                showAlert('Prediction started successfully!', 'success');
-                setTimeout(() => window.location.href = '/predictions/', 1500);
-            } else {
-                showAlert('Error running prediction: ' + (data.error || 'Unknown error'), 'danger');
-            }
-        })
-        .catch(error => {
-            showAlert('Error running prediction: ' + error.message, 'danger');
-        });
-    }
-}
-
-function runOptimization(datasetId) {
-    if (confirm('Run optimization on this dataset?')) {
-        fetch('/api/optimize/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                dataset_id: datasetId,
-                population_size: 40,
-                generations: 100
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                showAlert('Optimization started successfully!', 'success');
-                setTimeout(() => window.location.href = '/optimization/', 1500);
-            } else {
-                showAlert('Error running optimization: ' + (data.error || 'Unknown error'), 'danger');
-            }
-        })
-        .catch(error => {
-            showAlert('Error running optimization: ' + error.message, 'danger');
-        });
-    }
-}
-
-function runCorrelation(datasetId) {
-    if (confirm('Run correlation analysis on this dataset?')) {
-        fetch('/api/correlation/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                dataset_id: datasetId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                showAlert('Correlation analysis started successfully!', 'success');
-                setTimeout(() => window.location.href = '/correlation/', 1500);
-            } else {
-                showAlert('Error running correlation analysis: ' + (data.error || 'Unknown error'), 'danger');
-            }
-        })
-        .catch(error => {
-            showAlert('Error running correlation analysis: ' + error.message, 'danger');
-        });
-    }
+function downloadDataset(datasetId) {
+    window.open(`/api/datasets/${datasetId}/download/`, '_blank');
 }
 
 function deleteDataset(datasetId) {

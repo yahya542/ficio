@@ -19,24 +19,31 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from api import views
+from django.views.decorators.csrf import csrf_exempt
+from django.urls import re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('api.urls')),
-    
+    path('api/', include('api.urls')),  # Pastikan ini tetap ada
+
     # Authentication URLs
-    path('login/', views.login_view, name='login'),
+    path('', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
-    
-    # Dashboard URLs (require login)
-    path('', views.dashboard, name='dashboard'),
+
+    # Dashboard URLs
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('datasets/', views.datasets_view, name='datasets'),
     path('predictions/', views.predictions_view, name='predictions'),
     path('optimization/', views.optimization_view, name='optimization'),
     path('correlation/', views.correlation_view, name='correlation'),
+
+    # <-- Tambahkan ini
+    re_path(r'^api/.*$', csrf_exempt(lambda request: None)),
 ]
 
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
