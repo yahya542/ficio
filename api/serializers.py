@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis
+from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis, Realisasi
 
 class ShipSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,3 +40,8 @@ class OptimizationRequestSerializer(serializers.Serializer):
 
 class CorrelationRequestSerializer(serializers.Serializer):
     dataset_id = serializers.IntegerField() 
+
+class RealisasiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Realisasi
+        fields = '__all__'

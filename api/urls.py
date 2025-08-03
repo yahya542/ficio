@@ -10,6 +10,18 @@ urlpatterns = [
     path('datasets/<int:dataset_id>/', views.DatasetDetailView.as_view(), name='dataset-detail'),
     path('datasets/<int:dataset_id>/preview/', views.DatasetPreviewView.as_view(), name='dataset-preview'),
     path('datasets/<int:dataset_id>/download/', views.DatasetDownloadView.as_view(), name='dataset-download'),
+    path('datasets/<int:dataset_id>/real-sum/', views.DatasetRealSumView.as_view(), name='dataset-real-sum'),
+
+
+    #realisasi
+    path('realisasi/upload/', views.RealisasiUploadView.as_view(), name='realisasi-upload'),
+    path('realisasi/', views.RealisasiListView.as_view(), name='realisasi-list'),
+    path('realisasi/<int:realisasi_id>/', views.RealisasiDetailView.as_view(), name='realisasi-detail'),
+    path('realisasi/<int:realisasi_id>/sum/', views.RealisasiSumView.as_view(), name='realisasi-sum'),
+    path('realisasi/<int:realisasi_id>/preview/', views.RealisasiPreviewView.as_view(), name='realisasi-preview'),
+
+
+
     
     # Prediction endpoints
     path('predict/', views.PredictionView.as_view(), name='predict'),
@@ -26,4 +38,8 @@ urlpatterns = [
     
     # Export endpoint
     path('export/<int:prediction_id>/', views.ExportView.as_view(), name='export'),
+
+
+
+
 ] 
