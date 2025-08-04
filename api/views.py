@@ -325,7 +325,8 @@ class RealisasiUploadView(APIView):
             realisasi = serializer.save(user=request.user if request.user.is_authenticated else None)
             try:
                 # Load CSV from saved file path
-                df = pd.read_csv(realisasi.file.path)
+                df = pd.read_csv(realisasi.file.path, delimiter=';', encoding='utf-8', engine='python')
+
 
                 # Preview first 10 rows
                 data_preview = df.head(10).to_dict('records')

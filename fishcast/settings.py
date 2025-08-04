@@ -127,6 +127,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+#fileupload
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50485760
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50485760
+
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOWED_ORIGINS = [

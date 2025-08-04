@@ -45,3 +45,9 @@ class RealisasiSerializer(serializers.ModelSerializer):
     class Meta:
         model = Realisasi
         fields = '__all__'
+    
+    def validate_file(self, value):
+        max_size = 50 * 1024 * 1024  # 10 MB
+        if value.size > max_size:
+            raise serializers.ValidationError("Ukuran file maksimal 10MB.")
+        return value
