@@ -10,10 +10,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
-from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis
-from .serializers import ShipSerializer, DatasetSerializer, PredictionSerializer, OptimizationResultSerializer, CorrelationAnalysisSerializer
+from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis, Realisasi
+from .serializers import ShipSerializer, DatasetSerializer, PredictionSerializer, OptimizationResultSerializer, CorrelationAnalysisSerializer, RealisasiSerializer
 from .ml_models import ml_engine
+from django.views import View
 import pandas as pd
+
+
+
 
 # Authentication Views
 def login_view(request):
@@ -119,6 +123,62 @@ def correlation_view(request):
 def health_check(request):
     return Response({'status': 'healthy'}, status=status.HTTP_200_OK)
 
+
+@login_required
+def realisasi_upload_page(request):
+    if request.method == 'POST':
+        # FE form handling can call API
+        pass
+    return render(request, 'realisasi.html')
+
+
+#realisasi
+class RealisasiUploadTemplateView(View):
+    def get(self, request):
+        return render(request, 'realisasi_upload.html')
+
+    def post(self, request):
+        name = request.POST.get('name')
+        file = request.FILES.get('file')
+
+        if file:
+            realisasi = Realisasi.objects.create(name=name, file=file, user=request.user if request.user.is_authenticated else None)
+
+            try:
+                df = pd.read_csv(realisasi.file.path, delimiter=';', encoding='utf-8', engine='python')
+                df['Weight (Kg)'] = df['Weight (Kg)'].astype(float)
+                df['Fish Price (Rp)'] = df['Fish Price (Rp)'].astype(float)
+
+                total_volume_pendaratan = df['Weight (Kg)'].sum()
+                total_stok_ikan = df['Fish Price (Rp)'].sum()
+                data_preview = df.head(10).to_dict('records')
+
+                context = {
+                    'realisasi': realisasi,
+                    'data_preview': data_preview,
+                    'total_volume_pendaratan': total_volume_pendaratan,
+                    'total_stok_ikan': total_stok_ikan,
+                    'columns': df.columns
+                }
+                return render(request, 'realisasi_preview.html', context)
+
+            except Exception as e:
+                return render(request, 'realisasi_upload.html', {'error': str(e)})
+
+        return render(request, 'realisasi_upload.html', {'error': 'No file uploaded'})
+
+
+
+
+
+
+
+
+
+
+
+
+
 # --- API CLASS BASED VIEWS (CSRF EXEMPTED) ---
 @method_decorator(csrf_exempt, name='dispatch')
 class DatasetViewSet(APIView):
@@ -130,8 +190,21 @@ class DatasetViewSet(APIView):
     def post(self, request):
         serializer = DatasetSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user if request.user.is_authenticated else None)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            dataset = serializer.save(user=request.user if request.user.is_authenticated else None)
+            try: 
+                df = pd.read_csv(dataset.file.path)
+                datas_real = df.iloc[:, 0]
+                sum_data = datas_real.sum()
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({
+                'id': dataset.id,
+                'name': dataset.name,
+                'file': dataset.file.url,
+                'data_real_sum': sum_data  # <-- Total data real
+            }, status=status.HTTP_201_CREATED)
+            
+           
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -257,3 +330,111 @@ class ExportView(APIView):
     def get(self, request, prediction_id):
         prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
         return Response({'message': 'Export endpoint'}, status=status.HTTP_200_OK)
+#tambahan 
+@method_decorator(csrf_exempt, name='dispatch')
+class DatasetRealSumView(APIView):
+    def get(self, request, dataset_id):
+        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
+        try:
+            df = pd.read_csv(dataset.file.path)
+
+            # Hitung total volume_pendaratan
+            total_volume = df['volume_pendaratan'].sum()
+
+            # Kalau mau tambah total dari kolom lain (misal stok_ikan):
+            total_stok = df['stok_ikan'].sum()
+
+            return Response({
+                'dataset_id': dataset.id,
+                'dataset_name': dataset.name,
+                'total_volume_pendaratan': total_volume,
+                'total_stok_ikan': total_stok
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RealisasiUploadView(APIView):
+    def post(self, request):
+        serializer = RealisasiSerializer(data=request.data)
+        if serializer.is_valid():
+            realisasi = serializer.save(user=request.user if request.user.is_authenticated else None)
+            try:
+                # Load CSV from saved file path
+                df = pd.read_csv(realisasi.file.path, delimiter=';', encoding='utf-8', engine='python')
+
+
+                # Preview first 10 rows
+                data_preview = df.head(10).to_dict('records')
+
+                # Calculate Sums
+                total_volume_pendaratan = df['volume_pendaratan'].sum() if 'volume_pendaratan' in df.columns else 0
+                total_stok_ikan = df['stok_ikan'].sum() if 'stok_ikan' in df.columns else 0
+
+                return Response({
+                    'id': realisasi.id,
+                    'name': realisasi.name,
+                    'file': realisasi.file.url,
+                    'data_preview': data_preview,
+                    'total_volume_pendaratan': total_volume_pendaratan,
+                    'total_stok_ikan': total_stok_ikan,
+                    'total_rows': len(df),
+                    'columns': list(df.columns),
+                }, status=status.HTTP_201_CREATED)
+
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RealisasiListView(APIView):
+    def get(self, request):
+        realisasi = Realisasi.objects.filter(user=request.user) if request.user.is_authenticated else Realisasi.objects.all()
+        serializer = RealisasiSerializer(realisasi, many=True)
+        return Response(serializer.data)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RealisasiDetailView(APIView):
+    def get(self, request, realisasi_id):
+        realisasi = get_object_or_404(Realisasi, id=realisasi_id, user=request.user if request.user.is_authenticated else None)
+        serializer = RealisasiSerializer(realisasi)
+        return Response(serializer.data)
+@method_decorator(csrf_exempt, name='dispatch')
+class RealisasiSumView(APIView):
+    def get(self, request, realisasi_id):
+        realisasi = get_object_or_404(Realisasi, id=realisasi_id, user=request.user if request.user.is_authenticated else None)
+        try:
+            df = pd.read_csv(realisasi.file.path)
+
+            total_volume = df['volume_pendaratan'].sum() if 'volume_pendaratan' in df.columns else 0
+            total_stok = df['stok_ikan'].sum() if 'stok_ikan' in df.columns else 0
+
+            return Response({
+                'realisasi_id': realisasi.id,
+                'realisasi_name': realisasi.name,
+                'total_volume_pendaratan': total_volume,
+                'total_stok_ikan': total_stok
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RealisasiPreviewView(APIView):
+    def get(self, request, realisasi_id):
+        realisasi = get_object_or_404(Realisasi, id=realisasi_id, user=request.user if request.user.is_authenticated else None)
+        try:
+            df = pd.read_csv(realisasi.file.path)
+            data_preview = df.head(10).to_dict('records')
+            total_volume_pendaratan = df['volume_pendaratan'].sum() if 'volume_pendaratan' in df.columns else 0
+            total_stok_ikan = df['stok_ikan'].sum() if 'stok_ikan' in df.columns else 0
+
+            return Response({
+                'data_preview': data_preview,
+                'total_volume_pendaratan': total_volume_pendaratan,
+                'total_stok_ikan': total_stok_ikan
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

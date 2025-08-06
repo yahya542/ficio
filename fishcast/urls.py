@@ -40,6 +40,8 @@ urlpatterns = [
 
     # <-- Tambahkan ini
     re_path(r'^api/.*$', csrf_exempt(lambda request: None)),
+
+    path('realisasi/page/', views.realisasi_upload_page, name='realitation'),
 ]
 
 # Serve media files during development
