@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view
 from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis, Realisasi
 from .serializers import ShipSerializer, DatasetSerializer, PredictionSerializer, OptimizationResultSerializer, CorrelationAnalysisSerializer, RealisasiSerializer
 from .ml_models import ml_engine
+from django.views import View
 import pandas as pd
 
 
@@ -129,6 +130,42 @@ def realisasi_upload_page(request):
         # FE form handling can call API
         pass
     return render(request, 'realisasi.html')
+
+
+#realisasi
+class RealisasiUploadTemplateView(View):
+    def get(self, request):
+        return render(request, 'realisasi_upload.html')
+
+    def post(self, request):
+        name = request.POST.get('name')
+        file = request.FILES.get('file')
+
+        if file:
+            realisasi = Realisasi.objects.create(name=name, file=file, user=request.user if request.user.is_authenticated else None)
+
+            try:
+                df = pd.read_csv(realisasi.file.path, delimiter=';', encoding='utf-8', engine='python')
+                df['Weight (Kg)'] = df['Weight (Kg)'].astype(float)
+                df['Fish Price (Rp)'] = df['Fish Price (Rp)'].astype(float)
+
+                total_volume_pendaratan = df['Weight (Kg)'].sum()
+                total_stok_ikan = df['Fish Price (Rp)'].sum()
+                data_preview = df.head(10).to_dict('records')
+
+                context = {
+                    'realisasi': realisasi,
+                    'data_preview': data_preview,
+                    'total_volume_pendaratan': total_volume_pendaratan,
+                    'total_stok_ikan': total_stok_ikan,
+                    'columns': df.columns
+                }
+                return render(request, 'realisasi_preview.html', context)
+
+            except Exception as e:
+                return render(request, 'realisasi_upload.html', {'error': str(e)})
+
+        return render(request, 'realisasi_upload.html', {'error': 'No file uploaded'})
 
 
 
