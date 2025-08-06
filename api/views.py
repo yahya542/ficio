@@ -10,13 +10,11 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
-from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis, Realisasi
+from .models import Ship, Dataset, Prediction, OptimizationResult, CorrelationAnalysis, Realisasi, Kuota, Ikan
 from .serializers import ShipSerializer, DatasetSerializer, PredictionSerializer, OptimizationResultSerializer, CorrelationAnalysisSerializer, RealisasiSerializer
-from .ml_models import ml_engine
 from django.views import View
 import pandas as pd
-
-
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 
 # Authentication Views
@@ -25,11 +23,11 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
-        
+
         if user is not None:
             login(request, user)
             messages.success(request, f'Selamat datang, {user.username}!')
-            return redirect('dashboard')
+            return redirect('user_dashboard' if not user.is_staff else 'admin_dashboard')
         else:
             messages.error(request, 'Username atau password salah!')
     return render(request, 'login.html')
@@ -42,15 +40,15 @@ def register_view(request):
         ship_name = request.POST.get('ship_name')
         ship_id = request.POST.get('ship_id')
         captain_name = request.POST.get('captain_name')
-        
+
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username sudah digunakan!')
             return render(request, 'register.html')
-        
+
         if Ship.objects.filter(ship_id=ship_id).exists():
             messages.error(request, 'ID Kapal sudah terdaftar!')
             return render(request, 'register.html')
-        
+
         user = User.objects.create_user(username=username, password=password, email=email)
         Ship.objects.create(user=user, ship_name=ship_name, ship_id=ship_id, captain_name=captain_name)
         messages.success(request, 'Registrasi berhasil! Silakan login.')
@@ -63,378 +61,142 @@ def logout_view(request):
     return redirect('login')
 
 @login_required
-def dashboard(request):
-    try:
-        ship = request.user.ship
-    except Ship.DoesNotExist:
-        ship = None
-    
+def user_dashboard(request):
+    ship = getattr(request.user, 'ship', None)
+    tangkapan = Ikan.objects.filter(ship=ship)
+    kuotas = Kuota.objects.all()
+
     context = {
         'ship': ship,
-        'total_datasets': Dataset.objects.filter(user=request.user).count(),
-        'total_predictions': Prediction.objects.filter(user=request.user).count(),
-        'total_optimizations': OptimizationResult.objects.filter(user=request.user).count(),
-        'total_correlations': CorrelationAnalysis.objects.filter(user=request.user).count(),
-        'recent_datasets': Dataset.objects.filter(user=request.user)[:5],
-        'recent_predictions': Prediction.objects.filter(user=request.user)[:5],
-        'recent_optimizations': OptimizationResult.objects.filter(user=request.user)[:5],
+        'tangkapan': tangkapan,
+        'kuotas': kuotas
     }
-    return render(request, 'dashboard.html', context)
+    return render(request, 'user/dashboard.html', context)
 
 @login_required
-def datasets_view(request):
+def admin_dashboard(request):
+    ships = Ship.objects.all()
+    kuotas = Kuota.objects.all()
+
     if request.method == 'POST':
-        name = request.POST.get('name')
-        file = request.FILES.get('file')
-        description = request.POST.get('description', '')
-        
-        if name and file:
-            if not file.name.endswith('.csv'):
-                messages.error(request, 'Please upload a CSV file.')
-                return redirect('datasets')
-            
-            Dataset.objects.create(name=name, file=file, description=description, user=request.user)
-            messages.success(request, f'Dataset "{name}" uploaded successfully!')
-            return redirect('datasets')
-        else:
-            messages.error(request, 'Please provide a name and file.')
-    datasets = Dataset.objects.filter(user=request.user).order_by('-uploaded_at')
-    return render(request, 'datasets.html', {'datasets': datasets})
+        if 'add_tangkapan' in request.POST:
+            ship_id = request.POST.get('ship_id')
+            jenis_ikan = request.POST.get('jenis_ikan')
+            jumlah = request.POST.get('jumlah')
+            lokasi_tangkap = request.POST.get('lokasi_tangkap')
+
+            ship = get_object_or_404(Ship, id=ship_id)
+            Ikan.objects.create(ship=ship, jenis_ikan=jenis_ikan, jumlah=jumlah, lokasi_tangkap=lokasi_tangkap)
+            messages.success(request, 'Data tangkapan berhasil ditambahkan!')
+
+        if 'add_kuota' in request.POST:
+            jenis_ikan = request.POST.get('jenis_ikan')
+            total_kuota = request.POST.get('total_kuota')
+
+            Kuota.objects.create(jenis_ikan=jenis_ikan, total_kuota=total_kuota)
+            messages.success(request, 'Kuota berhasil ditambahkan!')
+
+        return redirect('admin_dashboard')
+
+    context = {
+        'ships': ships,
+        'kuotas': kuotas
+    }
+    return render(request, 'admin/dashboard.html', context)
 
 @login_required
-def predictions_view(request):
-    predictions = Prediction.objects.filter(user=request.user).select_related('dataset').order_by('-created_at')
-    datasets = Dataset.objects.filter(user=request.user).order_by('name')
-    return render(request, 'predictions.html', {'predictions': predictions, 'datasets': datasets})
+def dashboard(request):
+    if request.user.is_staff:
+        # Admin Dashboard
+        ships = Ship.objects.all()
+        kuotas = Kuota.objects.all()
 
-@login_required
-def optimization_view(request):
-    optimizations = OptimizationResult.objects.filter(user=request.user).select_related('dataset').order_by('-created_at')
-    datasets = Dataset.objects.filter(user=request.user).order_by('name')
-    return render(request, 'optimization.html', {'optimizations': optimizations, 'datasets': datasets})
+        if request.method == 'POST':
+            if 'add_tangkapan' in request.POST:
+                ship_id = request.POST.get('ship_id')
+                jenis_ikan = request.POST.get('jenis_ikan')
+                jumlah = request.POST.get('jumlah')
+                lokasi_tangkap = request.POST.get('lokasi_tangkap')
 
-@login_required
-def correlation_view(request):
-    correlations = CorrelationAnalysis.objects.filter(user=request.user).select_related('dataset').order_by('-created_at')
-    datasets = Dataset.objects.filter(user=request.user).order_by('name')
-    return render(request, 'correlation.html', {'correlations': correlations, 'datasets': datasets})
+                ship = get_object_or_404(Ship, id=ship_id)
+                Ikan.objects.create(ship=ship, jenis_ikan=jenis_ikan, jumlah=jumlah, lokasi_tangkap=lokasi_tangkap)
+                messages.success(request, 'Data tangkapan berhasil ditambahkan!')
 
+            if 'add_kuota' in request.POST:
+                jenis_ikan = request.POST.get('jenis_ikan')
+                total_kuota = request.POST.get('total_kuota')
+
+                Kuota.objects.create(jenis_ikan=jenis_ikan, total_kuota=total_kuota)
+                messages.success(request, 'Kuota berhasil ditambahkan!')
+
+            return redirect('dashboard')
+
+        context = {
+            'ships': ships,
+            'kuotas': kuotas
+        }
+        return render(request, 'admin/dashboard.html', context)
+
+    else:
+        # User Dashboard
+        ship = getattr(request.user, 'ship', None)
+        tangkapan = Ikan.objects.filter(ship=ship)
+        kuotas = Kuota.objects.all()
+
+        context = {
+            'ship': ship,
+            'tangkapan': tangkapan,
+            'kuotas': kuotas
+        }
+        return render(request, 'user/dashboard.html', context)
 @api_view(['GET'])
 def health_check(request):
     return Response({'status': 'healthy'}, status=status.HTTP_200_OK)
 
+# Remaining APIViews and Views will stay unchanged and used for API interactions as needed.
+#admin 
+def admin_required(view_func):
+    return login_required(user_passes_test(lambda u: u.is_staff)(view_func))
 
-@login_required
-def realisasi_upload_page(request):
-    if request.method == 'POST':
-        # FE form handling can call API
-        pass
-    return render(request, 'realisasi.html')
+@admin_required
+def dataset_list(request):
+    datasets = Dataset.objects.all()
+    return render(request, 'admin/dataset_list.html', {'datasets': datasets})
 
+@admin_required
+def run_prediction(request, dataset_id):
+    dataset = get_object_or_404(Dataset, id=dataset_id)
+    dataset_file_path = os.path.join('media', dataset.file.name)
 
-#realisasi
-class RealisasiUploadTemplateView(View):
-    def get(self, request):
-        return render(request, 'realisasi_upload.html')
+    results = ml_engine.train_and_predict(dataset_id, dataset_file_path)
 
-    def post(self, request):
-        name = request.POST.get('name')
-        file = request.FILES.get('file')
+    # Save Prediction Results (Optional, here just show it in frontend)
+    return render(request, 'admin/prediction_result.html', {
+        'dataset': dataset,
+        'results': results
+    })
 
-        if file:
-            realisasi = Realisasi.objects.create(name=name, file=file, user=request.user if request.user.is_authenticated else None)
+@admin_required
+def correlation_analysis(request, dataset_id):
+    dataset = get_object_or_404(Dataset, id=dataset_id)
+    dataset_file_path = os.path.join('media', dataset.file.name)
 
-            try:
-                df = pd.read_csv(realisasi.file.path, delimiter=';', encoding='utf-8', engine='python')
-                df['Weight (Kg)'] = df['Weight (Kg)'].astype(float)
-                df['Fish Price (Rp)'] = df['Fish Price (Rp)'].astype(float)
+    correlation_data = ml_engine.get_correlation_analysis(dataset_file_path)
 
-                total_volume_pendaratan = df['Weight (Kg)'].sum()
-                total_stok_ikan = df['Fish Price (Rp)'].sum()
-                data_preview = df.head(10).to_dict('records')
+    return render(request, 'admin/correlation_result.html', {
+        'dataset': dataset,
+        'correlation': correlation_data
+    })
 
-                context = {
-                    'realisasi': realisasi,
-                    'data_preview': data_preview,
-                    'total_volume_pendaratan': total_volume_pendaratan,
-                    'total_stok_ikan': total_stok_ikan,
-                    'columns': df.columns
-                }
-                return render(request, 'realisasi_preview.html', context)
+@admin_required
+def run_optimization(request, dataset_id):
+    dataset = get_object_or_404(Dataset, id=dataset_id)
+    dataset_file_path = os.path.join('media', dataset.file.name)
 
-            except Exception as e:
-                return render(request, 'realisasi_upload.html', {'error': str(e)})
+    optimization_data = ml_engine.run_optimization(dataset_file_path)
 
-        return render(request, 'realisasi_upload.html', {'error': 'No file uploaded'})
-
-
-
-
-
-
-
-
-
-
-
-
-
-# --- API CLASS BASED VIEWS (CSRF EXEMPTED) ---
-@method_decorator(csrf_exempt, name='dispatch')
-class DatasetViewSet(APIView):
-    def get(self, request):
-        datasets = Dataset.objects.filter(user=request.user) if request.user.is_authenticated else Dataset.objects.all()
-        serializer = DatasetSerializer(datasets, many=True)
-        return Response(serializer.data)
-    
-    def post(self, request):
-        serializer = DatasetSerializer(data=request.data)
-        if serializer.is_valid():
-            dataset = serializer.save(user=request.user if request.user.is_authenticated else None)
-            try: 
-                df = pd.read_csv(dataset.file.path)
-                datas_real = df.iloc[:, 0]
-                sum_data = datas_real.sum()
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            return Response({
-                'id': dataset.id,
-                'name': dataset.name,
-                'file': dataset.file.url,
-                'data_real_sum': sum_data  # <-- Total data real
-            }, status=status.HTTP_201_CREATED)
-            
-           
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class DatasetDetailView(APIView):
-    def get(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
-        serializer = DatasetSerializer(dataset)
-        return Response(serializer.data)
-    
-    def delete(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
-        dataset.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class DatasetPreviewView(APIView):
-    def get(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
-        try:
-            df = pd.read_csv(dataset.file.path)
-            data = df.head(10).to_dict('records')
-            return Response({
-                'data': data,
-                'total_rows': len(df),
-                'columns': list(df.columns),
-                'dataset_name': dataset.name
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class DatasetDownloadView(APIView):
-    def get(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
-        try:
-            with open(dataset.file.path, 'rb') as f:
-                response = HttpResponse(f.read(), content_type='text/csv')
-                response['Content-Disposition'] = f'attachment; filename="{dataset.name}.csv"'
-                return response
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class PredictionView(APIView):
-    def post(self, request):
-        try:
-            dataset_id = request.data.get('dataset_id')
-            models_to_train = request.data.get('models', ['Linear'])
-            
-            if not dataset_id:
-                return Response({'error': 'Dataset ID is required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
-            dataset_file = dataset.file.path
-            
-            results = ml_engine.train_and_predict(dataset_id, dataset_file, models_to_train)
-            saved_predictions = []
-            for model_name, result in results.items():
-                prediction = Prediction.objects.create(
-                    dataset=dataset,
-                    user=request.user if request.user.is_authenticated else None,
-                    model_type=model_name,
-                    predictions=result['predictions'],
-                    actual_values=result['actual_values'],
-                    mse=result['mse'],
-                    mae=result['mae']
-                )
-                saved_predictions.append(prediction)
-            
-            return Response({
-                'message': f'Successfully ran predictions for {len(saved_predictions)} models',
-                'predictions_created': len(saved_predictions),
-                'models_trained': list(results.keys())
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class PredictionListView(APIView):
-    def get(self, request):
-        predictions = Prediction.objects.filter(user=request.user) if request.user.is_authenticated else Prediction.objects.all()
-        serializer = PredictionSerializer(predictions, many=True)
-        return Response(serializer.data)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class PredictionDetailView(APIView):
-    def get(self, request, prediction_id):
-        prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
-        serializer = PredictionSerializer(prediction)
-        return Response(serializer.data)
-    
-    def delete(self, request, prediction_id):
-        prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
-        prediction.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class OptimizationView(APIView):
-    def post(self, request):
-        return Response({'message': 'Optimization endpoint'}, status=status.HTTP_200_OK)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class OptimizationListView(APIView):
-    def get(self, request):
-        optimizations = OptimizationResult.objects.filter(user=request.user) if request.user.is_authenticated else OptimizationResult.objects.all()
-        serializer = OptimizationResultSerializer(optimizations, many=True)
-        return Response(serializer.data)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class CorrelationView(APIView):
-    def post(self, request):
-        return Response({'message': 'Correlation endpoint'}, status=status.HTTP_200_OK)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class CorrelationListView(APIView):
-    def get(self, request):
-        correlations = CorrelationAnalysis.objects.filter(user=request.user) if request.user.is_authenticated else CorrelationAnalysis.objects.all()
-        serializer = CorrelationAnalysisSerializer(correlations, many=True)
-        return Response(serializer.data)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class ExportView(APIView):
-    def get(self, request, prediction_id):
-        prediction = get_object_or_404(Prediction, id=prediction_id, user=request.user if request.user.is_authenticated else None)
-        return Response({'message': 'Export endpoint'}, status=status.HTTP_200_OK)
-#tambahan 
-@method_decorator(csrf_exempt, name='dispatch')
-class DatasetRealSumView(APIView):
-    def get(self, request, dataset_id):
-        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user if request.user.is_authenticated else None)
-        try:
-            df = pd.read_csv(dataset.file.path)
-
-            # Hitung total volume_pendaratan
-            total_volume = df['volume_pendaratan'].sum()
-
-            # Kalau mau tambah total dari kolom lain (misal stok_ikan):
-            total_stok = df['stok_ikan'].sum()
-
-            return Response({
-                'dataset_id': dataset.id,
-                'dataset_name': dataset.name,
-                'total_volume_pendaratan': total_volume,
-                'total_stok_ikan': total_stok
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RealisasiUploadView(APIView):
-    def post(self, request):
-        serializer = RealisasiSerializer(data=request.data)
-        if serializer.is_valid():
-            realisasi = serializer.save(user=request.user if request.user.is_authenticated else None)
-            try:
-                # Load CSV from saved file path
-                df = pd.read_csv(realisasi.file.path, delimiter=';', encoding='utf-8', engine='python')
-
-
-                # Preview first 10 rows
-                data_preview = df.head(10).to_dict('records')
-
-                # Calculate Sums
-                total_volume_pendaratan = df['volume_pendaratan'].sum() if 'volume_pendaratan' in df.columns else 0
-                total_stok_ikan = df['stok_ikan'].sum() if 'stok_ikan' in df.columns else 0
-
-                return Response({
-                    'id': realisasi.id,
-                    'name': realisasi.name,
-                    'file': realisasi.file.url,
-                    'data_preview': data_preview,
-                    'total_volume_pendaratan': total_volume_pendaratan,
-                    'total_stok_ikan': total_stok_ikan,
-                    'total_rows': len(df),
-                    'columns': list(df.columns),
-                }, status=status.HTTP_201_CREATED)
-
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RealisasiListView(APIView):
-    def get(self, request):
-        realisasi = Realisasi.objects.filter(user=request.user) if request.user.is_authenticated else Realisasi.objects.all()
-        serializer = RealisasiSerializer(realisasi, many=True)
-        return Response(serializer.data)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RealisasiDetailView(APIView):
-    def get(self, request, realisasi_id):
-        realisasi = get_object_or_404(Realisasi, id=realisasi_id, user=request.user if request.user.is_authenticated else None)
-        serializer = RealisasiSerializer(realisasi)
-        return Response(serializer.data)
-@method_decorator(csrf_exempt, name='dispatch')
-class RealisasiSumView(APIView):
-    def get(self, request, realisasi_id):
-        realisasi = get_object_or_404(Realisasi, id=realisasi_id, user=request.user if request.user.is_authenticated else None)
-        try:
-            df = pd.read_csv(realisasi.file.path)
-
-            total_volume = df['volume_pendaratan'].sum() if 'volume_pendaratan' in df.columns else 0
-            total_stok = df['stok_ikan'].sum() if 'stok_ikan' in df.columns else 0
-
-            return Response({
-                'realisasi_id': realisasi.id,
-                'realisasi_name': realisasi.name,
-                'total_volume_pendaratan': total_volume,
-                'total_stok_ikan': total_stok
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RealisasiPreviewView(APIView):
-    def get(self, request, realisasi_id):
-        realisasi = get_object_or_404(Realisasi, id=realisasi_id, user=request.user if request.user.is_authenticated else None)
-        try:
-            df = pd.read_csv(realisasi.file.path)
-            data_preview = df.head(10).to_dict('records')
-            total_volume_pendaratan = df['volume_pendaratan'].sum() if 'volume_pendaratan' in df.columns else 0
-            total_stok_ikan = df['stok_ikan'].sum() if 'stok_ikan' in df.columns else 0
-
-            return Response({
-                'data_preview': data_preview,
-                'total_volume_pendaratan': total_volume_pendaratan,
-                'total_stok_ikan': total_stok_ikan
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return render(request, 'admin/optimization_result.html', {
+        'dataset': dataset,
+        'optimization': optimization_data
+    })
 

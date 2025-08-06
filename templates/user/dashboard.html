@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}User Dashboard{% endblock %}
+
+{% block content %}
+<h2>Profil Kapal</h2>
+<ul>
+    <li>Nama Kapal: {{ ship.ship_name }}</li>
+    <li>Captain: {{ ship.captain_name }}</li>
+    <li>Home Port: {{ ship.home_port }}</li>
+</ul>
+
+<h2>Riwayat Tangkapan</h2>
+<table border="1">
+    <tr>
+        <th>Tanggal</th>
+        <th>Jenis Ikan</th>
+        <th>Jumlah (kg)</th>
+        <th>Lokasi Tangkap</th>
+    </tr>
+    {% for ikan in tangkapan %}
+    <tr>
+        <td>{{ ikan.tanggal_input }}</td>
+        <td>{{ ikan.jenis_ikan }}</td>
+        <td>{{ ikan.jumlah }}</td>
+        <td>{{ ikan.lokasi_tangkap }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2>Kuota Jenis Ikan</h2>
+<table border="1">
+    <tr>
+        <th>Jenis Ikan</th>
+        <th>Sisa Kuota (kg)</th>
+    </tr>
+    {% for kuota in kuotas %}
+    <tr>
+        <td>{{ kuota.jenis_ikan }}</td>
+        <td>{{ kuota.sisa_kuota }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -200,46 +200,7 @@
                             <span class="sidebar-divider">KUOTA</span>
                             <hr class="m-0">
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'datasets' %}active{% endif %}"
-                                href="{% url 'datasets' %}">
-                                <i class="fas fa-database me-2"></i>Database
-                            </a>
-                        </li>
-                       
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'predictions' %}active{% endif %}"
-                                href="{% url 'predictions' %}">
-                                <i class="fas fa-chart-line me-2"></i>Predictions
-                            </a>
-                        </li>
-                        <!-- <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'optimization' %}active{% endif %}"
-                                href="{% url 'optimization' %}">
-                                <i class="fas fa-cogs me-2"></i>Optimization
-                            </a>
-                        </li> -->
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'optimization' %}active{% endif %}"
-                                href="{% url 'realitation' %}">
-                                <i class="fas fa-cogs me-2"></i>realsisasi
-                            </a>
-                        </li>
-                        <li class="nav-item mt-3 mb-1">
-                            <span class="sidebar-divider">ADMIN</span>
-                            <hr class="m-0">
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'correlation' %}active{% endif %}"
-                                href="{% url 'correlation' %}">
-                                <i class="fas fa-chart-bar me-2"></i>Correlation Analysis
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/" target="_blank">
-                                <i class="fas fa-user-shield me-2"></i>Admin Panel
-                            </a>
-                        </li>
+                      
                     </ul>
                 </div>
                 {% endif %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h2>Input Data Tangkapan</h2>
+<form method="post" action="{% url 'admin_dashboard' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="add_tangkapan">
+    <label>Pilih Kapal:</label>
+    <select name="ship_id">
+        {% for ship in ships %}
+        <option value="{{ ship.id }}">{{ ship.ship_name }}</option>
+        {% endfor %}
+    </select><br>
+
+    <label>Jenis Ikan:</label>
+    <input type="text" name="jenis_ikan"><br>
+
+    <label>Jumlah (kg):</label>
+    <input type="number" name="jumlah"><br>
+
+    <label>Lokasi Tangkap:</label>
+    <input type="text" name="lokasi_tangkap"><br>
+
+    <button type="submit" name="add_tangkapan">Submit Tangkapan</button>
+</form>
+
+<h2>Kelola Kuota Ikan</h2>
+<form method="post" action="{% url 'admin_dashboard' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="add_kuota">
+    <label>Jenis Ikan:</label>
+    <input type="text" name="jenis_ikan"><br>
+
+    <label>Total Kuota (kg):</label>
+    <input type="number" name="total_kuota"><br>
+
+    <button type="submit" name="add_kuota">Tambah Kuota</button>
+</form>
+
+<h3>Daftar Kuota</h3>
+<table border="1">
+    <tr>
+        <th>Jenis Ikan</th>
+        <th>Total Kuota</th>
+        <th>Sisa Kuota</th>
+    </tr>
+    {% for kuota in kuotas %}
+    <tr>
+        <td>{{ kuota.jenis_ikan }}</td>
+        <td>{{ kuota.total_kuota }}</td>
+        <td>{{ kuota.sisa_kuota }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
