@@ -8,11 +8,22 @@ class Ship(models.Model):
     def __str__(self):
         return self.ship_name
 
+class Ikan(models.Model):
+    nama = models.CharField(max_length=100)
+
+
 class Tangkapan(models.Model):
     ship = models.ForeignKey(Ship, on_delete=models.CASCADE)
     jenis_ikan = models.CharField(max_length=100)
     jumlah = models.IntegerField()
-    lokasi_tangkap = models.CharField(max_length=100)
+    lokasi= models.CharField(max_length=100)
 
     def __str__(self):
         return f"{self.jenis_ikan} - {self.ship.ship_name}"
+
+class WPP(models.Model):
+    code = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
