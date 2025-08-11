@@ -1,100 +1,86 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, BasePermission, SAFE_METHODS
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status, viewsets
-from .models import Ship, Tangkapan, Ikan
-from .serializers import ShipSerializer, TangkapanSerializer, IkanSerializer, ShipDetailSerializer
-from .permissions import IsAdminViaAPIKeyOrAuthenticated
+from rest_framework import status
 from django.conf import settings
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from .models import Kapal, TangkapanIkan
+from .serializers import KapalSerializer, InputTangkapanSerializer, JenisIkanSerializer, WPPSerializer
+from .permissions import IsAdminViaAPIKeyOrAuthenticated  # permission custom
 
 
+def is_admin_request(request):
+    return request.headers.get("X-ADMIN-KEY") == settings.ADMIN_API_KEY
 
 
-#api tanpa auth 
-class ReadOnlyOrAuthenticated(BasePermission):
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-        return request.user and request.user.is_authenticated
-
-
-# USER input kapal
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def input_ship(request):
-    serializer = ShipSerializer(data=request.data)
+def input_kapal(request):
+    serializer = KapalSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save(user=request.user)  # otomatis ambil user dari token
+        serializer.save(pemilik=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ADMIN melihat semua kapal
+
 @api_view(['GET'])
-@permission_classes([IsAdminViaAPIKeyOrAuthenticated])
-def list_ships(request):
-    ships = Ship.objects.all()
-    serializer = ShipSerializer(ships, many=True)
+@permission_classes([IsAuthenticated])
+def list_kapal(request):
+    if is_admin_request(request):
+        kapal = Kapal.objects.all()
+    else:
+        kapal = Kapal.objects.filter(pemilik=request.user)
+    serializer = KapalSerializer(kapal, many=True)
     return Response(serializer.data)
 
-# ADMIN input tangkapan
+
 @api_view(['POST'])
 @permission_classes([IsAdminViaAPIKeyOrAuthenticated])
-def input_tangkapan(request):
-    serializer = TangkapanSerializer(data=request.data)
+def input_tangkapan_batch(request):
+    if not is_admin_request(request):
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+    serializer = InputTangkapanSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        tangkapan_objs = serializer.save()
+        return Response({
+            "message": "Tangkapan berhasil disimpan",
+            "jumlah_data": len(tangkapan_objs)
+        }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ADMIN lihat semua tangkapan
+
 @api_view(['GET'])
-@permission_classes([IsAdminViaAPIKeyOrAuthenticated])
+@permission_classes([IsAuthenticated])
 def list_tangkapan(request):
-    tangkapan = Tangkapan.objects.all()
-    serializer = TangkapanSerializer(tangkapan, many=True)
+
+
+    if is_admin_request(request):
+        tangkapan = TangkapanIkan.objects.all()
+    else:
+        tangkapan = TangkapanIkan.objects.filter(kapal__pemilik=request.user)
+    data = [{
+        "kapal": t.kapal.nama_kapal,
+        "jenis_ikan": t.jenis_ikan.nama_ikan,
+        "jumlah": t.jumlah,
+        "wpp": t.wpp.nama_wpp,
+        "tanggal_input": t.tanggal_input
+    } for t in tangkapan]
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_jenis_ikan(request):
+    ikan = JenisIkanSerializer.Meta.model.objects.all()
+    serializer = JenisIkanSerializer(ikan, many=True)
     return Response(serializer.data)
 
-#list nama ikan 
-class IkanViewSet(viewsets.ModelViewSet):
-    queryset = Ikan.objects.all()
-    serializer_class = IkanSerializer
-    permission_classes = [ReadOnlyOrAuthenticated]
 
-#admin key 
-class IsAdminViaAPIKeyOrAuthenticated(BasePermission):
-    def has_permission(self, request, view):
-        admin_key = (
-            request.headers.get('X-ADMIN-KEY') or
-            request.GET.get('X-ADMIN-KEY')  
-        )
-        if admin_key and admin_key == settings.ADMIN_API_KEY:
-            return True
-        return request.user and request.user.is_authenticated and request.user.is_staff
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_wpp(request):
+    wpp = WPPSerializer.Meta.model.objects.all()
+    serializer = WPPSerializer(wpp, many=True)
+    return Response(serializer.data)
 
 
-
-#cek validasi id kapal 
-@api_view(['POST'])
-@permission_classes([IsAdminViaAPIKeyOrAuthenticated])
-def valid_id_view(request):
-    # ✅ Ambil id_kapal dari body POST
-    ship_id = request.data.get('ship_id')
-    
-    if not id:
-        return Response({'error': 'id_kapal is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        # ✅ GET data kapal sesuai id_kapal yang dikirim via POST
-        ship_id = Ship.objects.get(ship_id=ship_id)
-        serializer = ShipDetailSerializer(ship)
-        return Response({
-            'valid': True,
-            'data': serializer.data
-        })
-    except Ship.DoesNotExist:
-        return Response({
-            'valid': False,
-            'data': None
-        })
+#console 

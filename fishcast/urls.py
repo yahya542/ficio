@@ -1,20 +1,13 @@
+# backend/urls.py
 from django.contrib import admin
 from django.urls import path, include
+from api.auth_views import register, login
 
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-
-
-   
 
 
 urlpatterns = [
+    path('register/', register, name='register'),
+    path('login/', login, name='login'),
     path('admin/', admin.site.urls),
-    path('api/', include('api.urls')),
-
-    path('api/', include('api.urls')),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/', include('api.urls')),  # semua API dari file api/urls.py
 ]

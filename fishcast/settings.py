@@ -81,8 +81,12 @@ WSGI_APPLICATION = 'fishcast.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'db_ficio',
+        'USER': 'db_user',
+        'PASSWORD': 'ficio_123',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -165,3 +169,6 @@ LOGOUT_REDIRECT_URL = reverse_lazy('login')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ADMIN_API_KEY = "rahasia_admin_123"
+AUTH_USER_MODEL = 'api.CustomUser'
+
+

@@ -1,26 +1,17 @@
 from django.urls import path
 from . import views
-from .views import IkanViewSet
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import IkanViewSet, valid_id_view
-
-
-router = DefaultRouter()
-router.register(r'ikan', IkanViewSet, basename='ikan')
-
 
 
 urlpatterns = [
-    path('ship/', views.input_ship, name='input_ship'),
-    path('ships/', views.list_ships, name='list_ships'),
-    path('tangkapan/', views.input_tangkapan, name='input_tangkapan'),
-    path('tangkapans/', views.list_tangkapan, name='list_tangkapan'),
-    path('', include(router.urls)),
-    path('valid_id/', valid_id_view),
+    # Kapal
+    path('kapal/input/', views.input_kapal, name='input_kapal'),
+    path('list-kapal/', views.list_kapal, name='list_kapal'),
 
+    # Tangkapan
+    path('tangkapan/input/', views.input_tangkapan_batch, name='input_tangkapan_batch'),
+    path('tangkapan/list/', views.list_tangkapan, name='list_tangkapan'),
 
-   
-
-
+    # Master Data
+    path('master/jenis-ikan/', views.list_jenis_ikan, name='list_jenis_ikan'),
+    path('master/wpp/', views.list_wpp, name='list_wpp'),
 ]
