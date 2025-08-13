@@ -13,7 +13,7 @@ def is_admin_request(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminViaAPIKeyOrAuthenticated])
 def input_kapal(request):
     serializer = KapalSerializer(data=request.data)
     if serializer.is_valid():
@@ -23,7 +23,7 @@ def input_kapal(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminViaAPIKeyOrAuthenticated])
 def list_kapal(request):
     if is_admin_request(request):
         kapal = Kapal.objects.all()
@@ -49,7 +49,7 @@ def input_tangkapan_batch(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminViaAPIKeyOrAuthenticated])
 def list_tangkapan(request):
 
 
@@ -59,10 +59,10 @@ def list_tangkapan(request):
         tangkapan = TangkapanIkan.objects.filter(kapal__pemilik=request.user)
     data = [{
         "kapal": t.kapal.nama_kapal,
-        "jenis_ikan": t.jenis_ikan.nama_ikan,
-        "jumlah": t.jumlah,
-        "wpp": t.wpp.nama_wpp,
-        "tanggal_input": t.tanggal_input
+        "jenis_ikan": t.jenis_ikan.name,
+        "weight": t.weight, 
+        "location": t.location.name,
+       
     } for t in tangkapan]
     return Response(data)
 

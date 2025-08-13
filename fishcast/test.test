@@ -1,0 +1,12 @@
+login/regis
+{
+  "noreg_bkp": "BK123456",
+  "password": "password123" 
+}
+
+
+input
+{
+  "nama_kapal": "KM Laut Jaya",
+  "nahkoda": 2   // ID user nahkoda (boleh null kalau kosong)
+}

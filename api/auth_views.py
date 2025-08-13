@@ -45,7 +45,7 @@ def login(request):
     if not noreg_bkp or not password:
         return Response({'error': 'noreg_bkp dan password wajib diisi'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = authenticate(request, noreg_bkp=noreg_bkp, password=password)
+    user = authenticate(request, username=noreg_bkp, password=password)
 
     if user is None:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)

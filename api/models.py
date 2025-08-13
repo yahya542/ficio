@@ -31,15 +31,29 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.noreg_bkp
 
-
 class Kapal(models.Model):
     nama_kapal = models.CharField(max_length=100)
-    pemilik = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='kapal_dimiliki')
-    nahkoda = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='kapal_dinahkodai')
+    pemilik = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='kapal_dimiliki'
+    )
+    nahkoda = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='kapal_dinahkodai'
+    )
 
     def __str__(self):
-        return self.nama_kapal
+        return f"{self.noregbkp} - {self.nama_kapal}"
 
+
+class Ikan(models.Model):
+    nama_ikan = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nama_ikan
 
 class JenisIkan(models.Model):
     name = models.CharField(max_length=100)
@@ -62,4 +76,7 @@ class TangkapanIkan(models.Model):
 
     def __str__(self):
         return f"{self.jenis_ikan.name} - {self.kapal.nama_kapal} ({self.weight} kg)"
+
+
+
 
