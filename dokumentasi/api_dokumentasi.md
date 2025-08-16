@@ -132,3 +132,57 @@
         ]
     }
 }
+
+# history untuk user biasa (nahkoda/pemilik) # 
+
+ --> (GET)
+
+#response: {
+    "history": [
+        {
+            "id": 1,
+            "tanggal": "2025-08-16T07:11:24.213769Z",
+            "jenis_ikan": "Tuna",
+            "weight": 150.5,
+            "location": "Samudera Hindia Selatan Nusa Tenggara"
+        },
+        {
+            "id": 2,
+            "tanggal": "2025-08-16T07:11:24.213769Z",
+            "jenis_ikan": "Kakap",
+            "weight": 200.0,
+            "location": "Samudera Hindia Selatan Nusa Tenggara"
+        },
+        {
+            "id": 3,
+            "tanggal": "2025-08-16T07:11:24.213769Z",
+            "jenis_ikan": "Tuna",
+            "weight": 160.0,
+            "location": "Samudera Hindia Selatan Nusa Tenggara"
+        },
+        {
+            "id": 4,
+            "tanggal": "2025-08-16T07:11:24.213769Z",
+            "jenis_ikan": "Kakap",
+            "weight": 208.0,
+            "location": "Samudera Hindia Selatan Nusa Tenggara"
+        },
+        {
+            "id": 5,
+            "tanggal": "2025-08-16T07:11:43.266329Z",
+            "jenis_ikan": "Tuna",
+            "weight": 150.5,
+            "location": "Samudera Hindia Selatan Nusa Tenggara"
+        },
+        {
+            "id": 6,
+            "tanggal": "2025-08-16T07:11:43.311484Z",
+            "jenis_ikan": "Kakap",
+            "weight": 200.0,
+            "location": "Samudera Hindia Selatan Nusa Tenggara"
+        }
+    ]
+}
+
+# history untuk admin 
+    sebelum /history berikan noregbkp kapal 

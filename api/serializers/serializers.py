@@ -53,7 +53,8 @@ class InputTangkapanSerializer(serializers.Serializer):
                 kapal=kapal,
                 jenis_ikan=ikan,
                 weight=item['berat'],
-                location=wpp
+                location=wpp,
+                jumlah=item['jumlah'],
             )
             created_items.append({
                 "jenis_ikan": ikan.nama,
@@ -66,3 +67,11 @@ class InputTangkapanSerializer(serializers.Serializer):
             "no_reg_bkp": kapal.no_reg_bkp,
             "tangkapan": created_items
         }
+
+class TangkapanHistorySerializer(serializers.ModelSerializer):
+    jenis_ikan = serializers.CharField(source='jenis_ikan.nama')
+    wpp = serializers.CharField(source='location.name')
+
+    class Meta:
+        model = TangkapanIkan
+        fields = ['jenis_ikan', 'weight', 'jumlah', 'wpp', 'created_at']

@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
+from django.utils import timezone
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, role='user', **extra_fields):
@@ -62,8 +64,7 @@ class Profile(models.Model):
         return f"{self.user.username} ({self.role})"
 
 
-# Model lain tetap sama
-from django.db import models
+
 
 class JenisIkan(models.Model):
     nama = models.CharField(max_length=100, unique=True)  # Nama jenis ikan unik
@@ -91,12 +92,15 @@ class WPP(models.Model):
 
 class TangkapanIkan(models.Model):
     kapal = models.ForeignKey(Kapal, on_delete=models.CASCADE, related_name="catches")
-    jenis_ikan = models.ForeignKey(JenisIkan, on_delete=models.CASCADE, related_name="catches")
+    jenis_ikan = models.ForeignKey(
+        JenisIkan,
+        on_delete=models.CASCADE,
+        default=1  # pakai id Tuna yang sudah ada
+    )
     weight = models.FloatField(help_text="Berat dalam kilogram")
     location = models.ForeignKey(WPP, on_delete=models.CASCADE, related_name="catches")
-
-    def __str__(self):
-        return f"{self.jenis_ikan.nama} - {self.kapal.nama_kapal} ({self.weight} kg)"
+    created_at = models.DateTimeField(default=timezone.now)
+    jumlah = models.IntegerField(default=0)
 
 
 

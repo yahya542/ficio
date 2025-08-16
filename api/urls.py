@@ -14,4 +14,10 @@ urlpatterns = [
     # Master Data
     path('master/jenis-ikan/', views.list_jenis_ikan, name='list_jenis_ikan'),
     path('master/wpp/', views.list_wpp, name='list_wpp'),
+
+    #dhistory tangkapan
+    path('kapal/history/', views.kapal_history, name='kapal_history_user'),
+
+    # History kapal perkapal untuk admin (wajib sertakan no_reg_bkp)
+    path('kapal/<str:no_reg_bkp>/history/', views.kapal_history, name='kapal_history_admin'),
 ]

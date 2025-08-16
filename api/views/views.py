@@ -88,4 +88,31 @@ def list_wpp(request):
     return Response(serializer.data)
 
 
-#console 
+@api_view(['GET', "POST"])
+@permission_classes([IsAuthenticated])
+def kapal_history(request, no_reg_bkp=None):
+    if is_admin_request(request):
+        # Admin wajib input no_reg_bkp
+        if not no_reg_bkp:
+            return Response({"detail": "Admin harus menyertakan no_reg_bkp"}, status=400)
+        try:
+            kapal = Kapal.objects.get(no_reg_bkp=no_reg_bkp)
+        except Kapal.DoesNotExist:
+            return Response({"detail": "Kapal tidak ditemukan"}, status=404)
+        tangkapan = TangkapanIkan.objects.filter(kapal=kapal).order_by('created_at')
+    else:
+        # User biasa, ambil tangkapan kapal miliknya
+        tangkapan = TangkapanIkan.objects.filter(kapal__profiles__user=request.user).order_by('created_at')
+
+    data = [{
+        "id": t.id,
+        "tanggal": t.created_at,
+        "jenis_ikan": t.jenis_ikan.nama,
+        "weight": t.weight,
+        "location": t.location.name,
+        "jumlah": t.jumlah  
+    } for t in tangkapan]
+
+    return Response({
+        "history": data
+    })
