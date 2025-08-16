@@ -63,15 +63,25 @@ class Profile(models.Model):
 
 
 # Model lain tetap sama
-class Ikan(models.Model):
-    nama_ikan = models.CharField(max_length=100, unique=True)
-    def __str__(self):
-        return self.nama_ikan
+from django.db import models
 
 class JenisIkan(models.Model):
-    nama_ikan= models.CharField(max_length=100)
+    nama = models.CharField(max_length=100, unique=True)  # Nama jenis ikan unik
+
     def __str__(self):
-        return self.nama_ikan
+        return self.nama
+
+
+class Ikan(models.Model):
+    nama_ikan = models.CharField(max_length=150)
+    jenis_ikan = models.ForeignKey(
+        JenisIkan,
+        on_delete=models.CASCADE,  # Kalau jenis ikan dihapus, semua ikan terkait ikut terhapus
+        related_name='daftar_ikan'
+    )
+
+    def __str__(self):
+        return f"{self.nama_ikan} ({self.jenis_ikan.nama})"
 
 class WPP(models.Model):
     code = models.IntegerField(primary_key=True)
@@ -84,5 +94,11 @@ class TangkapanIkan(models.Model):
     jenis_ikan = models.ForeignKey(JenisIkan, on_delete=models.CASCADE, related_name="catches")
     weight = models.FloatField(help_text="Berat dalam kilogram")
     location = models.ForeignKey(WPP, on_delete=models.CASCADE, related_name="catches")
+
     def __str__(self):
-        return f"{self.jenis_ikan.name} - {self.kapal.nama_kapal} ({self.weight} kg)"
+        return f"{self.jenis_ikan.nama} - {self.kapal.nama_kapal} ({self.weight} kg)"
+
+
+
+
+

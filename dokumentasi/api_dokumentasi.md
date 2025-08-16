@@ -92,3 +92,43 @@
 }
 
 
+# input tangkapan # 
+{
+  "no_reg_bkp": "REG71256002",
+  "tangkapan": [
+    {
+      "jenis_ikan_id": 1,
+      "berat": 150.5,
+      "jumlah": 50,
+      "wpp_id": 712
+    },
+    {
+      "jenis_ikan_id": 2,
+      "berat": 200,
+      "jumlah": 30,
+      "wpp_id": 712
+    }
+  ]
+}
+
+
+#response: {
+    "message": "Tangkapan berhasil disimpan",
+    "data": {
+        "no_reg_bkp": "REG71256002",
+        "tangkapan": [
+            {
+                "jenis_ikan": "Tuna",
+                "berat": 150.5,
+                "jumlah": 50,
+                "wpp": "Samudera Hindia Selatan Nusa Tenggara"
+            },
+            {
+                "jenis_ikan": "Kakap",
+                "berat": 200.0,
+                "jumlah": 30,
+                "wpp": "Samudera Hindia Selatan Nusa Tenggara"
+            }
+        ]
+    }
+}

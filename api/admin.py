@@ -26,8 +26,8 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(JenisIkan)
 class JenisIkanAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nama_ikan')
-    search_fields = ('nama_ikan',)
+    list_display = ('id', 'nama')
+    search_fields = ('nama',)
 
 
 @admin.register(WPP)

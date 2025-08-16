@@ -7,6 +7,8 @@ from ..models import Kapal, TangkapanIkan, Profile
 from ..serializers.serializers import KapalSerializer, InputTangkapanSerializer, JenisIkanSerializer, WPPSerializer
 from ..permissions import RolePermission
 
+def is_admin_request(request):
+    return request.user.is_authenticated and request.user.role == 'admin'
 
 
 
@@ -43,13 +45,15 @@ def list_kapal(request):
 def input_tangkapan_batch(request):
     if not is_admin_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
     serializer = InputTangkapanSerializer(data=request.data)
     if serializer.is_valid():
-        tangkapan_objs = serializer.save()
+        result = serializer.save()  # result sudah dict {"no_reg_bkp": ..., "tangkapan": [...]}
         return Response({
             "message": "Tangkapan berhasil disimpan",
-            "jumlah_data": len(tangkapan_objs)
+            "data": result
         }, status=status.HTTP_201_CREATED)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -62,7 +66,7 @@ def list_tangkapan(request):
         tangkapan = TangkapanIkan.objects.filter(kapal__profiles__user=request.user)
     data = [{
         "kapal": t.kapal.nama_kapal,
-        "jenis_ikan": t.jenis_ikan.name,
+        "jenis_ikan": t.jenis_ikan.nama,
         "weight": t.weight,
         "location": t.location.name,
     } for t in tangkapan]
