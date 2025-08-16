@@ -1,7 +1,8 @@
 # backend/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from api.auth_views import register, login
+from api.views.auth_views import register, login
+from api.views.views import input_kapal, list_kapal, input_tangkapan_batch, list_tangkapan
 
 
 

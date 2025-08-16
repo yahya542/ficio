@@ -1,115 +1,94 @@
-1. Register User
-Method: POST
-
-URL: http://localhost:8000/api/register/ (sesuaikan dengan URL kamu)
-
-Body (JSON):
-
-json
-Copy
-Edit
+# register pemilik #
 {
-  "noreg_bkp": "user001",
-  "password": "password123"
+  "username": "pemilik02",
+  "email": "pemilik02@email.com",
+  "password": "rahasia123",
+  "role": "pemilik_kapal",
+  "nama_kapal": "Kapal kencana",
+  "no_buku_kapal": "BK23456",
+  "wpp_code": "712"
 }
-Expected:
-Response 201 Created, pesan sukses user dibuat.
 
-2. Login
-Method: POST
+#response : {
+    "message": "User berhasil daftar",
+    "noregbkp": "REG71256002"
+}
 
-URL: http://localhost:8000/api/login/
+# register nahkoda #
 
-Body (JSON):
-
-json
-Copy
-Edit
 {
-  "noreg_bkp": "user001",
-  "password": "password123"
+    "username": "nahkoda2",
+    "email": "nahkoda@example.com",
+    "password": "pass123",
+    "role": "nahkoda",
+    "no_reg_bkp": "REG71256002"
 }
-Expected:
-Response 200 OK dengan token access dan refresh.
 
-3. Input Kapal (User biasa)
-Method: POST
+#response : {
+    "message": "User berhasil daftar",
+    "noregbkp": "REG71256002"
+}
 
-URL: http://localhost:8000/api/kapal/input/
+# login pemilik # 
 
-Headers:
-Authorization: Bearer <access_token_dari_login>
-
-Body (JSON):
-
-json
-Copy
-Edit
 {
-  "nama_kapal": "Kapal Mutiara",
-  "nahkoda": "user002"   // noreg_bkp si nahkoda (pastikan user ini sudah ada)
+    "password": "rahasia123",
+    "username/noreg_bkp": "REG71256002"
 }
-Expected:
-Response 201 Created dengan data kapal.
 
-4. List Kapal
-Method: GET
+#response : {
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1NTgzMzcwMSwiaWF0IjoxNzU1MjI4OTAxLCJqdGkiOiI1YTE5YTQ3ZDNjMGI0ZWYyYmVkMTBjNzVlODNiZTAyOSIsInVzZXJfaWQiOiIyIn0.irlnbvJyRdha_2fIhAKC6tahx5qWvexoPJbb53nA3o4",
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1MjMyNTAxLCJpYXQiOjE3NTUyMjg5MDEsImp0aSI6ImE2MDJjNDdkMTE1MDQ4ODk5NzIwMDE5YjVkMzhjMTZkIiwidXNlcl9pZCI6IjIifQ.n9pyIv2SoN3m8U95WcbvIXyrVnqRmubeyD4ynu6lzLQ",
+    "user": {
+        "id": 2,
+        "username": "pemilik02",
+        "email": null,
+        "role": "pemilik_kapal",
+        "kapal": "REG71256002"
+    }
+}
 
-URL: http://localhost:8000/api/list-kapal/
+# login nahkoda # 
 
-Headers:
-Authorization: Bearer <access_token>
+{
+    "password": "pass123",
+    "username/noreg_bkp": "REG71256002"
+}
 
-Expected:
-Daftar kapal yang dimiliki user atau semua kapal kalau admin.
+#response : {
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1NTgzMzc5OSwiaWF0IjoxNzU1MjI4OTk5LCJqdGkiOiI0YzRiNmIwOGJjYWU0MmFhYTY5MzU3NzhmNWUxOTcwMSIsInVzZXJfaWQiOiIzIn0.Iq33JWq-ApbLqccFDqvVc4PRUQuOSfbOZSPiCOH47nE",
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1MjMyNTk5LCJpYXQiOjE3NTUyMjg5OTksImp0aSI6IjJmNzg1NjFmMWMwYzQ5NTNiYWJhMzg2ZDA1NDJkMzI0IiwidXNlcl9pZCI6IjMifQ.wxqEYoj9LtzoiXU9Ms7_rsfnsZg4yQkO2s_poTZUqf0",
+    "user": {
+        "id": 3,
+        "username": "nahkoda2",
+        "email": "nahkoda@example.com",
+        "role": "nahkoda",
+        "kapal": "REG71256002"
+    }
+}
 
-5. Input Tangkapan (Admin)
-Method: POST
+# admin # 
 
-URL: http://localhost:8000/api/tangkapan/input/
+    username='admin1',
+    password='rahasia123',
+    email='admin@example.com'
 
-Headers:
-Authorization: Bearer <admin_access_token>
-X-ADMIN-KEY: rahasia_admin_123
+# login admin # 
+{
+    "username/noreg_bkp":"admin1",
+    "password":"rahasia123"
+}
 
-Body (JSON) contoh (batch input):
+#response : {
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1NTgzNjc2MywiaWF0IjoxNzU1MjMxOTYzLCJqdGkiOiIyYTZjMTJmN2JmNDM0ZWE3OTMwODY0YWVmYzQxNTViYSIsInVzZXJfaWQiOiI0In0.kf07U2pCvjbI_Hdf1Aa1GfMTdreFueKdEf28M7vcOn4",
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1MjM1NTYzLCJpYXQiOjE3NTUyMzE5NjMsImp0aSI6IjM1ZTRkZmE3NzAwZTQ4ZjI5OTM0M2E1NDM0YmVlZGZkIiwidXNlcl9pZCI6IjQifQ.yir__atgrxreDuS62VDz9nSrFYKFnaeZJaxXOj_VIxc",
+    "user": {
+        "id": 4,
+        "username": "admin1",
+        "email": "admin@example.com",
+        "role": "admin",
+        "kapal": null
+    }
+}
 
-json
-Copy
-Edit
-[
-  {
-    "kapal": 1,             // ID kapal
-    "jenis_ikan": 1,        // ID jenis ikan
-    "weight": 100.5,
-    "location": 713         // kode WPP
-  },
-  {
-    "kapal": 1,
-    "jenis_ikan": 2,
-    "weight": 50,
-    "location": 713
-  }
-]
-Expected:
-Response 201 Created, jumlah data yang berhasil disimpan.
-
-6. List Tangkapan
-Method: GET
-
-URL: http://localhost:8000/api/list-tangkapan/
-
-Headers:
-Authorization: Bearer <access_token>
-(tambahkan X-ADMIN-KEY jika mau lihat semua data)
-
-Expected:
-Daftar tangkapan sesuai hak akses.
-
-Tips:
-Pastikan dulu kamu sudah buat user untuk pemilik kapal, nahkoda, dan admin (bisa lewat register atau langsung lewat admin panel).
-
-Gunakan token access di header Authorization: Bearer <token> untuk endpoint yang perlu autentikasi.
-
-Jangan lupa untuk pasang header X-ADMIN-KEY untuk akses admin khusus.
 

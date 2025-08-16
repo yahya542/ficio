@@ -1,9 +1,17 @@
 from rest_framework.permissions import BasePermission
-from django.conf import settings
 
-class IsAdminViaAPIKeyOrAuthenticated(BasePermission):
+ROLE_ACCESS = {
+    'admin': ['*'],  # semua endpoint
+    'pemilik_kapal': ['lihat_kapal', 'lihat_tangkapan', 'register', 'login'],
+    'nahkoda': ['lihat_kapal',  'lihat_tangkapan', 'register', 'login'],
+}
+
+class RolePermission(BasePermission):
+    def __init__(self, endpoint_name):
+        self.endpoint_name = endpoint_name
+
     def has_permission(self, request, view):
-        admin_key = request.headers.get("X-ADMIN-KEY")
-        if admin_key and admin_key == settings.ADMIN_API_KEY:
-            return True  # admin pakai API key langsung
-        return request.user and request.user.is_authenticated
+        if not request.user.is_authenticated:
+            return False
+        allowed = ROLE_ACCESS.get(request.user.role, [])
+        return '*' in allowed or self.endpoint_name in allowed
