@@ -39,12 +39,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 
 class Kapal(models.Model):
-    no_reg_bkp = models.CharField(max_length=15, unique=True)  # cukup panjang untuk format REG + kode
-    no_buku_kapal = models.CharField(max_length=50, blank=True, null=True)
+    no_buku_kapal = models.CharField(max_length=50, unique=True)  # wajib & unik
     nama_kapal = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"{self.no_reg_bkp} - {self.nama_kapal}"
+        return f"{self.no_buku_kapal} - {self.nama_kapal}"
 
 
 
