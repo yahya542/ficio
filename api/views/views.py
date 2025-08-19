@@ -32,7 +32,7 @@ def input_kapal(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_kapal(request):
-    if is_admin_request(request):
+    if request.user.role in ['admin', 'auditori', 'regulator']:
         kapal = Kapal.objects.all()
     else:
         kapal = Kapal.objects.filter(profiles__user=request.user)
@@ -48,7 +48,7 @@ def input_tangkapan_batch(request):
 
     serializer = InputTangkapanSerializer(data=request.data)
     if serializer.is_valid():
-        result = serializer.save()  # result sudah dict {"no_reg_bkp": ..., "tangkapan": [...]}
+        result = serializer.save()  # result sudah dict {"no_buku_kapal": ..., "tangkapan": [...]}
         return Response({
             "message": "Tangkapan berhasil disimpan",
             "data": result
@@ -90,13 +90,13 @@ def list_wpp(request):
 
 @api_view(['GET', "POST"])
 @permission_classes([IsAuthenticated])
-def kapal_history(request, no_reg_bkp=None):
-    if is_admin_request(request):
-        # Admin wajib input no_reg_bkp
-        if not no_reg_bkp:
-            return Response({"detail": "Admin harus menyertakan no_reg_bkp"}, status=400)
+def kapal_history(request, no_buku_kapal=None):
+    if request.user.role in ['admin', 'auditori', 'regulator']:
+        # Admin wajib input no_buku_kapal
+        if not no_buku_kapal:
+            return Response({"detail": "Admin harus menyertakan no_buku_kapal"}, status=400)
         try:
-            kapal = Kapal.objects.get(no_reg_bkp=no_reg_bkp)
+            kapal = Kapal.objects.get(no_buku_kapal=no_buku_kapal)
         except Kapal.DoesNotExist:
             return Response({"detail": "Kapal tidak ditemukan"}, status=404)
         tangkapan = TangkapanIkan.objects.filter(kapal=kapal).order_by('created_at')

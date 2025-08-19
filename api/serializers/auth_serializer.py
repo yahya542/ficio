@@ -2,6 +2,12 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from ..models import CustomUser, Kapal, Profile
+from rest_framework import serializers
+from ..models import CustomUser, Kapal, Profile, WPP
+
+
+
+
 
 
 # Serializer untuk Login + Custom Response
@@ -24,18 +30,24 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
 
-from rest_framework import serializers
-from ..models import CustomUser, Kapal, Profile, WPP
 
 class RegisterSerializer(serializers.ModelSerializer):
+    ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('pemilik_kapal', 'Pemilik Kapal'),
+        ('nahkoda', 'Nahkoda'),
+        ('auditori', 'Auditori'),
+        ('regulator', 'Regulator'),
+    ]
+
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=[('pemilik_kapal', 'Pemilik Kapal'), ('nahkoda', 'Nahkoda')])
+    role = serializers.ChoiceField(choices=ROLE_CHOICES)
     
-    # Semua role pakai no_buku_kapal
-    no_buku_kapal = serializers.CharField(write_only=True, required=True)
-    nama_kapal = serializers.CharField(write_only=True, required=False)  # hanya untuk pemilik kapal
-    wpp_code = serializers.CharField(write_only=True, required=False)   # hanya untuk pemilik kapal
+    # hanya wajib untuk role kapal
+    no_buku_kapal = serializers.CharField(write_only=True, required=False)
+    nama_kapal = serializers.CharField(write_only=True, required=False)
+    wpp_code = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = CustomUser
@@ -45,20 +57,23 @@ class RegisterSerializer(serializers.ModelSerializer):
         role = attrs.get('role')
         no_buku_kapal = attrs.get('no_buku_kapal')
 
-        # Pastikan kapal sudah ada
-        try:
-            kapal = Kapal.objects.get(no_buku_kapal=no_buku_kapal)
-        except Kapal.DoesNotExist:
-            raise serializers.ValidationError(f"Kapal dengan no_buku_kapal {no_buku_kapal} tidak ditemukan")
+        if role in ['pemilik_kapal', 'nahkoda']:
+            if not no_buku_kapal:
+                raise serializers.ValidationError({
+                    "no_buku_kapal": "Field wajib untuk role pemilik_kapal / nahkoda"
+                })
+            try:
+                kapal = Kapal.objects.get(no_buku_kapal=no_buku_kapal)
+            except Kapal.DoesNotExist:
+                raise serializers.ValidationError(f"Kapal dengan no_buku_kapal {no_buku_kapal} tidak ditemukan")
+            attrs['kapal_instance'] = kapal
 
-        # Untuk pemilik kapal, cek wajib isi nama_kapal dan wpp_code
-        if role == 'pemilik_kapal':
-            if not attrs.get('nama_kapal') or not attrs.get('wpp_code'):
-                raise serializers.ValidationError("Pemilik kapal wajib isi nama_kapal dan wpp_code")
-            if not WPP.objects.filter(code=attrs['wpp_code']).exists():
-                raise serializers.ValidationError("WPP code tidak ditemukan")
+            if role == 'pemilik_kapal':
+                if not attrs.get('nama_kapal') or not attrs.get('wpp_code'):
+                    raise serializers.ValidationError("Pemilik kapal wajib isi nama_kapal dan wpp_code")
+                if not WPP.objects.filter(code=attrs['wpp_code']).exists():
+                    raise serializers.ValidationError("WPP code tidak ditemukan")
 
-        attrs['kapal_instance'] = kapal  # simpan instance kapal untuk create
         return attrs
 
     def create(self, validated_data):
@@ -66,13 +81,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         email = validated_data.pop('email')
         username = validated_data.get('username')
-        kapal = validated_data.pop('kapal_instance')
 
-        # Buat user
+        kapal = validated_data.pop('kapal_instance', None)
+
         user = CustomUser(username=username, email=email, role=role)
         user.set_password(password)
         user.save()
 
-        # Buat profile
-        Profile.objects.create(user=user, kapal=kapal, role=role)
+        # buat profile jika role terkait kapal
+        if kapal:
+            Profile.objects.create(user=user, kapal=kapal, role=role)
+
         return user

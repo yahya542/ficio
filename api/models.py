@@ -89,6 +89,71 @@ class WPP(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
 
+
+ 
+
+
+
+
+
+# =========================
+# KUOTA GLOBAL
+# =========================
+class KuotaGlobal(models.Model):
+    periode = models.DateField(help_text="Gunakan tanggal awal bulan, contoh: 2025-08-01")
+    jenis_ikan = models.ForeignKey("JenisIkan", on_delete=models.CASCADE, related_name="kuota_global")
+    wpp = models.ForeignKey("WPP", on_delete=models.CASCADE, related_name="kuota_global")
+    kuota_total = models.FloatField(help_text="Total kuota global (kg/ton)")
+    ditetapkan_oleh = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="kuota_ditetapkan"
+    )
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("aktif", "Aktif"),
+        ("tutup", "Ditutup"),
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="aktif")
+    dibuat_pada = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("periode", "jenis_ikan", "wpp")
+        ordering = ["-periode"]
+
+    def __str__(self):
+        return f"Kuota {self.jenis_ikan.nama} - {self.wpp.name} ({self.periode})"
+
+    @property
+    def total_teralokasi(self):
+        return sum(a.kuota for a in self.alokasi.all())
+
+    @property
+    def sisa_kuota(self):
+        return self.kuota_total - self.total_teralokasi
+
+
+# =========================
+# KUOTA PER KAPAL
+# =========================
+class KuotaKapal(models.Model):
+    kuota_global = models.ForeignKey(KuotaGlobal, on_delete=models.CASCADE, related_name="alokasi")
+    kapal = models.ForeignKey("Kapal", on_delete=models.CASCADE, related_name="alokasi_kuota")
+    kuota = models.FloatField(help_text="Kuota dialokasikan untuk kapal ini (kg/ton)")
+    kuota_terpakai = models.FloatField(default=0, help_text="Kuota yang sudah dipakai (kg/ton)")
+
+    class Meta:
+        unique_together = ("kuota_global", "kapal")
+
+    def __str__(self):
+        return f"{self.kapal.nama_kapal} - {self.kuota}kg"
+
+    @property
+    def sisa_kuota(self):
+        return self.kuota - self.kuota_terpakai
+
+
 class TangkapanIkan(models.Model):
     kapal = models.ForeignKey(Kapal, to_field="no_buku_kapal", on_delete=models.CASCADE, related_name="catches")
     jenis_ikan = models.ForeignKey(
@@ -101,7 +166,11 @@ class TangkapanIkan(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     jumlah = models.IntegerField(default=0)
 
-
-
-
-
+    # relasi baru ke Kuota
+    kuota = models.ForeignKey(
+        KuotaKapal,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="penangkapan"
+    )

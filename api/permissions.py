@@ -1,9 +1,12 @@
+# permissions.py
 from rest_framework.permissions import BasePermission
 
 ROLE_ACCESS = {
     'admin': ['*'],  # semua endpoint
     'pemilik_kapal': ['lihat_kapal', 'lihat_tangkapan', 'register', 'login'],
-    'nahkoda': ['lihat_kapal',  'lihat_tangkapan', 'register', 'login'],
+    'nahkoda': ['lihat_kapal', 'lihat_tangkapan', 'register', 'login'],
+    'auditor': ['lihat_kapal', 'lihat_tangkapan'],
+    'regulator': ['lihat_kapal', 'lihat_tangkapan', 'kelola_kuota'],
 }
 
 class RolePermission(BasePermission):
@@ -14,4 +17,4 @@ class RolePermission(BasePermission):
         if not request.user.is_authenticated:
             return False
         allowed = ROLE_ACCESS.get(request.user.role, [])
-        return '*' in allowed or self.endpoint_name in allowed
+        return '*' in allowed or (self.endpoint_name and self.endpoint_name in allowed)
