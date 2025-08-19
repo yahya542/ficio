@@ -90,7 +90,7 @@ class WPP(models.Model):
         return f"{self.code} - {self.name}"
 
 class TangkapanIkan(models.Model):
-    kapal = models.ForeignKey(Kapal, on_delete=models.CASCADE, related_name="catches")
+    kapal = models.ForeignKey(Kapal, to_field="no_buku_kapal", on_delete=models.CASCADE, related_name="catches")
     jenis_ikan = models.ForeignKey(
         JenisIkan,
         on_delete=models.CASCADE,

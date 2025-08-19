@@ -11,7 +11,7 @@
 
 #response : {
     "message": "User berhasil daftar",
-    "noregbkp": "REG71256002"
+    
 }
 
 # register nahkoda #
@@ -21,19 +21,19 @@
     "email": "nahkoda@example.com",
     "password": "pass123",
     "role": "nahkoda",
-    "no_reg_bkp": "REG71256002"
+    "no_buku_kapal": "BK23456",
 }
 
 #response : {
     "message": "User berhasil daftar",
-    "noregbkp": "REG71256002"
+    
 }
 
 # login pemilik # 
 
 {
     "password": "rahasia123",
-    "username/noreg_bkp": "REG71256002"
+    "username/no_buku_kapal": "BK23456"
 }
 
 #response : {
@@ -52,7 +52,7 @@
 
 {
     "password": "pass123",
-    "username/noreg_bkp": "REG71256002"
+    "username/noreg_bkp": "BK23456",
 }
 
 #response : {
@@ -75,7 +75,7 @@
 
 # login admin # 
 {
-    "username/noreg_bkp":"admin1",
+    "username/no_buku_kapal":"admin1",
     "password":"rahasia123"
 }
 
@@ -186,3 +186,6 @@
 
 # history untuk admin 
     sebelum /history berikan noregbkp kapal 
+
+# admin import data kapal # 
+    Kapal.objects.create(no_buku_kapal='BK23456', nama_kapal='Kapal kencana')
