@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Kapal, JenisIkan, WPP, TangkapanIkan, CustomUser
+from ..models import Kapal, JenisIkan, WPP, TangkapanIkan, CustomUser, KuotaKapal
 
 
 
@@ -20,7 +20,7 @@ class KapalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Kapal
-        fields = ['id', 'nama_kapal', 'no_reg_bkp', 'no_buku_kapal', 'pemilik']
+        fields = ['id', 'nama_kapal', 'no_buku_kapal', 'no_buku_kapal', 'pemilik']
 
     def get_pemilik(self, obj):
         profile = obj.profiles.filter(role='pemilik_kapal').first()
@@ -30,22 +30,38 @@ class KapalSerializer(serializers.ModelSerializer):
 class TangkapanIkanSerializer(serializers.Serializer):
     jenis_ikan_id = serializers.IntegerField()
     berat = serializers.FloatField()
-    jumlah = serializers.IntegerField()
     wpp_id = serializers.IntegerField()
 
-class InputTangkapanSerializer(serializers.Serializer):
-    no_reg_bkp = serializers.CharField()
-    tangkapan = TangkapanIkanSerializer(many=True)
 
-    def validate_no_reg_bkp(self, value):
-        if not Kapal.objects.filter(no_reg_bkp=value).exists():
+class InputTangkapanSerializer(serializers.Serializer):
+    no_buku_kapal = serializers.CharField()
+    tangkapan = serializers.ListField()
+
+    def validate_no_buku_kapal(self, value):
+        if not Kapal.objects.filter(no_buku_kapal=value).exists():
             raise serializers.ValidationError("Kapal dengan noreg_bkp ini tidak ditemukan")
         return value
 
     def create(self, validated_data):
-        kapal = Kapal.objects.get(no_reg_bkp=validated_data['no_reg_bkp'])
+        kapal = Kapal.objects.get(no_buku_kapal=validated_data['no_buku_kapal'])
         created_items = []
 
+        # Ambil kuota kapal
+        kuota = KuotaKapal.objects.filter(kapal=kapal).first()
+        if not kuota:
+            raise serializers.ValidationError("Kuota kapal belum diatur")
+        kuota_dialokasikan = kuota.kuota
+        kuota_terpakai = kuota.kuota_terpakai
+        sisa_kuota = kuota_dialokasikan - kuota_terpakai
+
+        # Hitung total berat batch baru
+        total_berat_batch = sum(item['berat'] for item in validated_data['tangkapan'])
+        if total_berat_batch > sisa_kuota:
+            raise serializers.ValidationError(
+                f"Kuota kapal tidak mencukupi. Sisa: {sisa_kuota} kg, total batch: {total_berat_batch} kg"
+            )
+
+        # Simpan tangkapan batch
         for item in validated_data['tangkapan']:
             ikan = JenisIkan.objects.get(id=item['jenis_ikan_id'])
             wpp = WPP.objects.get(code=item['wpp_id'])
@@ -54,19 +70,34 @@ class InputTangkapanSerializer(serializers.Serializer):
                 jenis_ikan=ikan,
                 weight=item['berat'],
                 location=wpp,
-                jumlah=item['jumlah'],
+                kuota=kuota
             )
             created_items.append({
                 "jenis_ikan": ikan.nama,
                 "berat": item['berat'],
-                "jumlah": item['jumlah'],
-                "wpp": wpp.name
+                "wpp": wpp.name,
+                "kuota_dialokasikan": kuota_dialokasikan,
+                "kuota_terpakai": kuota_terpakai,
+                "sisa_kuota": sisa_kuota - total_berat_batch
             })
 
+        # Update kuota_terpakai di KuotaKapal
+        kuota.kuota_terpakai += total_berat_batch
+        kuota.save()
+
         return {
-            "no_reg_bkp": kapal.no_reg_bkp,
-            "tangkapan": created_items
+            "no_buku_kapal": kapal.no_buku_kapal,
+            "tangkapan": created_items,
+            "summary": {
+                "total_berat_batch": total_berat_batch,
+                "kuota_dialokasikan": kuota_dialokasikan,
+                "kuota_terpakai": kuota_terpakai + total_berat_batch,
+                "sisa_kuota_terhitung": sisa_kuota - total_berat_batch
+            }
         }
+
+
+
 
 class TangkapanHistorySerializer(serializers.ModelSerializer):
     jenis_ikan = serializers.CharField(source='jenis_ikan.nama')
@@ -74,4 +105,4 @@ class TangkapanHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TangkapanIkan
-        fields = ['jenis_ikan', 'weight', 'jumlah', 'wpp', 'created_at']
+        fields = ['jenis_ikan', 'weight',  'wpp', 'created_at']

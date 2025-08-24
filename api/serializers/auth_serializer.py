@@ -12,6 +12,8 @@ from ..models import CustomUser, Kapal, Profile, WPP
 
 # Serializer untuk Login + Custom Response
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True, write_only=True)
     def validate(self, attrs):
         data = super().validate(attrs)
 

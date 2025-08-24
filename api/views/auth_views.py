@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from api.models import CustomUser, Profile
 from rest_framework.views import APIView
-from api.serializers.auth_serializer import RegisterSerializer
+from api.serializers.auth_serializer import RegisterSerializer, CustomTokenObtainPairSerializer
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -34,6 +34,7 @@ class RegisterView(APIView):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
+    serializer_class = CustomTokenObtainPairSerializer
     
     identifier = request.data.get('username/no_buku_kapal')  # username atau nomor kapal
     password = request.data.get('password')

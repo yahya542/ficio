@@ -4,6 +4,10 @@ from django.db import models
 from django.utils import timezone
 
 
+
+# =========================
+# CUSTOM USER MANAGER 
+# =========================
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, role='user', **extra_fields):
         if not username:
@@ -24,6 +28,10 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(username, password, role='admin', **extra_fields)
 
 
+
+# =========================
+# CUSTOM USER MODEL
+# =========================
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
     is_staff = models.BooleanField(default=False)
@@ -38,6 +46,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
 
+
+# =========================
+# KAPAL
+# =========================
 class Kapal(models.Model):
     no_buku_kapal = models.CharField(max_length=50, unique=True)  # wajib & unik
     nama_kapal = models.CharField(max_length=100)
@@ -47,6 +59,10 @@ class Kapal(models.Model):
 
 
 
+
+# =========================
+# PROFILE USER 
+# =========================
 class Profile(models.Model):
     ROLE_CHOICES = [
         ('nahkoda', 'Nahkoda'),
@@ -65,13 +81,15 @@ class Profile(models.Model):
 
 
 
+# =========================
+# NAMA IKAN DAN JENIS IKAN 
+# =========================
+
 class JenisIkan(models.Model):
     nama = models.CharField(max_length=100, unique=True)  # Nama jenis ikan unik
 
     def __str__(self):
         return self.nama
-
-
 class Ikan(models.Model):
     nama_ikan = models.CharField(max_length=150)
     jenis_ikan = models.ForeignKey(
@@ -83,6 +101,10 @@ class Ikan(models.Model):
     def __str__(self):
         return f"{self.nama_ikan} ({self.jenis_ikan.nama})"
 
+
+# =========================
+# LOKASI WPP 
+# =========================
 class WPP(models.Model):
     code = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=255)
@@ -90,61 +112,16 @@ class WPP(models.Model):
         return f"{self.code} - {self.name}"
 
 
- 
-
-
-
-
-
-# =========================
-# KUOTA GLOBAL
-# =========================
-class KuotaGlobal(models.Model):
-    periode = models.DateField(help_text="Gunakan tanggal awal bulan, contoh: 2025-08-01")
-    jenis_ikan = models.ForeignKey("JenisIkan", on_delete=models.CASCADE, related_name="kuota_global")
-    wpp = models.ForeignKey("WPP", on_delete=models.CASCADE, related_name="kuota_global")
-    kuota_total = models.FloatField(help_text="Total kuota global (kg/ton)")
-    ditetapkan_oleh = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="kuota_ditetapkan"
-    )
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("aktif", "Aktif"),
-        ("tutup", "Ditutup"),
-    ]
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="aktif")
-    dibuat_pada = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ("periode", "jenis_ikan", "wpp")
-        ordering = ["-periode"]
-
-    def __str__(self):
-        return f"Kuota {self.jenis_ikan.nama} - {self.wpp.name} ({self.periode})"
-
-    @property
-    def total_teralokasi(self):
-        return sum(a.kuota for a in self.alokasi.all())
-
-    @property
-    def sisa_kuota(self):
-        return self.kuota_total - self.total_teralokasi
-
-
 # =========================
 # KUOTA PER KAPAL
 # =========================
 class KuotaKapal(models.Model):
-    kuota_global = models.ForeignKey(KuotaGlobal, on_delete=models.CASCADE, related_name="alokasi")
     kapal = models.ForeignKey("Kapal", on_delete=models.CASCADE, related_name="alokasi_kuota")
-    kuota = models.FloatField(help_text="Kuota dialokasikan untuk kapal ini (kg/ton)")
+    kuota = models.FloatField(help_text="Total kuota kapal (kg/ton)")
     kuota_terpakai = models.FloatField(default=0, help_text="Kuota yang sudah dipakai (kg/ton)")
 
     class Meta:
-        unique_together = ("kuota_global", "kapal")
+        unique_together = ("kapal",)
 
     def __str__(self):
         return f"{self.kapal.nama_kapal} - {self.kuota}kg"
@@ -154,6 +131,9 @@ class KuotaKapal(models.Model):
         return self.kuota - self.kuota_terpakai
 
 
+# =========================
+# TANGKAPAN IKAN
+# =========================
 class TangkapanIkan(models.Model):
     kapal = models.ForeignKey(Kapal, to_field="no_buku_kapal", on_delete=models.CASCADE, related_name="catches")
     jenis_ikan = models.ForeignKey(
@@ -164,7 +144,7 @@ class TangkapanIkan(models.Model):
     weight = models.FloatField(help_text="Berat dalam kilogram")
     location = models.ForeignKey(WPP, on_delete=models.CASCADE, related_name="catches")
     created_at = models.DateTimeField(default=timezone.now)
-    jumlah = models.IntegerField(default=0)
+   
 
     # relasi baru ke Kuota
     kuota = models.ForeignKey(

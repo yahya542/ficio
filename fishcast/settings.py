@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist', 
     'corsheaders',
     'api',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -165,9 +166,14 @@ REST_FRAMEWORK = {
 
 
 # Authentication settings
-LOGIN_URL = reverse_lazy('login')
+""" LOGIN_URL = reverse_lazy('login')
 LOGIN_REDIRECT_URL = reverse_lazy('dashboard')
-LOGOUT_REDIRECT_URL = reverse_lazy('login')
+LOGOUT_REDIRECT_URL = reverse_lazy('login')  """
+
+LOGIN_URL = '/swagger/'
+LOGIN_REDIRECT_URL = '/swagger/'
+LOGOUT_REDIRECT_URL = '/swagger/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

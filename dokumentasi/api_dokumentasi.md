@@ -52,7 +52,7 @@
 
     {
         "password": "pass123",
-        "username/noreg_bkp": "BK23456",
+        "username/no_buku_kapal": "BK23456",
     }
 
     #response : {
@@ -132,6 +132,18 @@
         }
     }
 
+# regulator input kuota kapal # 
+    {
+    "no_buku_kapal":"BK23456",
+    "kuota":500
+    }
+    #response : {
+    "message": "Kuota total kapal berhasil diatur",
+    "no_buku_kapal": "BK23456",
+    "kuota": 500.0,
+    "kuota_terpakai": 0,
+    "sisa_kuota": 500.0
+    }
 
 
 
@@ -143,10 +155,10 @@
 
 # input tangkapan # 
     {
-    "no_reg_bkp": "REG71256002",
+    "no_buku_kapal": "BK23456",
     "tangkapan": [
         {
-        "jenis_ikan_id": 1,
+        "jenis_ikan_id": 27, #27-36
         "berat": 150.5,
         "jumlah": 50,
         "wpp_id": 712
@@ -159,28 +171,39 @@
         }
     ]
     }
-
-
-    #response: {
-        "message": "Tangkapan berhasil disimpan",
-        "data": {
-            "no_reg_bkp": "REG71256002",
-            "tangkapan": [
-                {
-                    "jenis_ikan": "Tuna",
-                    "berat": 150.5,
-                    "jumlah": 50,
-                    "wpp": "Samudera Hindia Selatan Nusa Tenggara"
-                },
-                {
-                    "jenis_ikan": "Kakap",
-                    "berat": 200.0,
-                    "jumlah": 30,
-                    "wpp": "Samudera Hindia Selatan Nusa Tenggara"
-                }
-            ]
+ 
+   {
+    "message": "Tangkapan berhasil disimpan",
+    "data": {
+        "no_buku_kapal": "BK23456",
+        "tangkapan": [
+            {
+                "jenis_ikan": "Ikan Cakalang",
+                "berat": 20.5,
+                "jumlah": 60,
+                "wpp": "Samudera Hindia Selatan Nusa Tenggara",
+                "kuota_dialokasikan": 500.0,
+                "kuota_terpakai": 282.5,
+                "sisa_kuota": 217.5
+            },
+            {
+                "jenis_ikan": "Ikan Mas",
+                "berat": 40,
+                "jumlah": 19,
+                "wpp": "Samudera Hindia Selatan Nusa Tenggara",
+                "kuota_dialokasikan": 500.0,
+                "kuota_terpakai": 282.5,
+                "sisa_kuota": 217.5
+            }
+        ],
+        "summary": {
+            "total_berat_batch": 60.5,
+            "kuota_dialokasikan": 500.0,
+            "kuota_terpakai": 282.5,
+            "sisa_kuota_terhitung": 217.5
         }
     }
+}
 
 
 # history untuk admin 
