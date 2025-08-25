@@ -6,6 +6,7 @@ from django.conf import settings
 from ..models import Kapal, TangkapanIkan, Profile, KuotaKapal
 from ..serializers.serializers import KapalSerializer, InputTangkapanSerializer, JenisIkanSerializer, WPPSerializer
 from ..permissions import RolePermission
+from django.db.models import Sum
 
 def is_admin_request(request):
     return request.user.is_authenticated and request.user.role == 'admin'
@@ -115,37 +116,38 @@ def list_wpp(request):
     return Response(serializer.data)
 
 
-@api_view(['GET', "POST"])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def kapal_history(request, no_buku_kapal=None):
+    # Tentukan kapal berdasarkan role
     if request.user.role in ['admin', 'auditori', 'regulator']:
-        # Admin wajib input no_buku_kapal
         if not no_buku_kapal:
             return Response({"detail": "Admin harus menyertakan no_buku_kapal"}, status=400)
-        try:
-            kapal = Kapal.objects.get(no_buku_kapal=no_buku_kapal)
-        except Kapal.DoesNotExist:
+        kapal = Kapal.objects.filter(no_buku_kapal=no_buku_kapal).first()
+        if not kapal:
             return Response({"detail": "Kapal tidak ditemukan"}, status=404)
         tangkapan = TangkapanIkan.objects.filter(kapal=kapal).order_by('created_at')
     else:
-        # User biasa, ambil tangkapan kapal miliknya
-        tangkapan = TangkapanIkan.objects.filter(kapal__profiles__user=request.user).order_by('created_at')
+        kapal = Kapal.objects.filter(profiles__user=request.user).first()
+        if not kapal:
+            return Response({"detail": "Kapal milik user tidak ditemukan"}, status=404)
+        tangkapan = TangkapanIkan.objects.filter(kapal=kapal).order_by('created_at')
 
     data = []
     for t in tangkapan:
-        kuota = t.kuota  # KuotaKapal instance, bisa None
+        kuota_dialokasikan = t.kuota.kuota if hasattr(t, 'kuota') and t.kuota else None
+        kuota_terpakai = t.kuota.kuota_terpakai if hasattr(t, 'kuota') and t.kuota else None
+        sisa_kuota = kuota_dialokasikan - t.weight if kuota_dialokasikan else None
+
         data.append({
             "id": t.id,
             "tanggal": t.created_at,
             "jenis_ikan": t.jenis_ikan.nama,
             "weight": t.weight,
             "location": t.location.name,
-            "jumlah": t.jumlah,
-            "kuota_dialokasikan": kuota.kuota if kuota else None,
-            "kuota_terpakai": kuota.kuota_terpakai if kuota else None,
-            "sisa_kuota": kuota.sisa_kuota if kuota else None
+            "kuota_dialokasikan": kuota_dialokasikan,
+            "kuota_terpakai": kuota_terpakai,
+            "sisa_kuota": sisa_kuota
         })
 
-    return Response({
-        "history": data
-    })
+    return Response({"history": data})

@@ -4,9 +4,15 @@ from django.urls import path, include, re_path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-
-# import views kamu
+from django.http import FileResponse
+import os
 from api.views.auth_views import login, RegisterView  
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def dokumentasi(request):
+    file_path = os.path.join(BASE_DIR, "dokumentasi/dokumentasi_mentah.md")
+    return FileResponse(open(file_path, 'rb'), as_attachment=False, filename="API_Fishcast.md")
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -30,6 +36,10 @@ urlpatterns = [
 
     # Semua API dari aplikasi api/urls.py
     path('api/', include('api.urls')),
+
+
+    #dokumentasi 
+    path("dokumentasi/", dokumentasi, name="dokumentasi"),
 
     # Swagger docs
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
