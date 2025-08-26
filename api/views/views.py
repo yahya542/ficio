@@ -5,7 +5,7 @@ from rest_framework import status
 from django.conf import settings
 from ..models import Kapal, TangkapanIkan, Profile, KuotaKapal
 from ..serializers.serializers import KapalSerializer, InputTangkapanSerializer, JenisIkanSerializer, WPPSerializer
-from ..permissions import RolePermission, RolePermissionFactory
+from ..permissions import RolePermissionFactory, RolePermissionFactory
 from django.db.models import Sum
 
 def is_admin_request(request):
@@ -31,7 +31,7 @@ def input_kapal(request):
 
 
 @api_view(['GET'])
-@permission_classes([RolePermission('list_kapal')])
+@permission_classes([RolePermissionFactory('list_kapal')])
 def list_kapal(request):
     if request.user.role in ['admin', 'auditori', 'regulator']:
         kapal = Kapal.objects.all()
@@ -40,7 +40,7 @@ def list_kapal(request):
     serializer = KapalSerializer(kapal, many=True)
     return Response(serializer.data)
 @api_view(['POST'])
-@permission_classes([RolePermission('input_tangkapan')])
+@permission_classes([RolePermissionFactory('input_tangkapan')])
 def input_tangkapan_batch(request):
     if not is_admin_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
@@ -87,7 +87,7 @@ def input_tangkapan_batch(request):
 
 
 @api_view(['GET'])
-@permission_classes([RolePermission('list_jenis_ikan')])
+@permission_classes([RolePermissionFactory('list_jenis_ikan')])
 def list_jenis_ikan(request):
     ikan = JenisIkanSerializer.Meta.model.objects.all()
     serializer = JenisIkanSerializer(ikan, many=True)
@@ -95,7 +95,7 @@ def list_jenis_ikan(request):
 
 
 @api_view(['GET'])
-@permission_classes([RolePermission('list_wpp')])
+@permission_classes([RolePermissionFactory('list_wpp')])
 def list_wpp(request):
     wpp = WPPSerializer.Meta.model.objects.all()
     serializer = WPPSerializer(wpp, many=True)
@@ -107,6 +107,9 @@ def list_wpp(request):
 def kapal_history(request, no_buku_kapal=None):
     # Tentukan kapal berdasarkan role
     if request.user.role in ['admin', 'auditor', 'regulator']:
+        # Ambil dari body POST jika tidak ada di URL
+        if request.method == 'POST':
+            no_buku_kapal = request.data.get('no_buku_kapal')
         if not no_buku_kapal:
             return Response({"detail": "Admin harus menyertakan no_buku_kapal"}, status=400)
         kapal = Kapal.objects.filter(no_buku_kapal=no_buku_kapal).first()
