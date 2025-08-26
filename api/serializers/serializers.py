@@ -6,13 +6,13 @@ from ..models import Kapal, JenisIkan, WPP, TangkapanIkan, CustomUser, KuotaKapa
 class JenisIkanSerializer(serializers.ModelSerializer):
     class Meta:
         model = JenisIkan
-        fields = ['id', 'nama_ikan']
+        fields = ['id', 'nama']
 
 
 class WPPSerializer(serializers.ModelSerializer):
     class Meta:
         model = WPP
-        fields = ['kode', 'nama_wpp']
+        fields = ['code', 'name']
 
 
 class KapalSerializer(serializers.ModelSerializer):

@@ -8,9 +8,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from api.models import CustomUser, Profile
 from rest_framework.views import APIView
 from api.serializers.auth_serializer import RegisterSerializer, CustomTokenObtainPairSerializer
-
+from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes
 class RegisterView(APIView):
     permission_classes = [AllowAny]
+    @extend_schema(
+        request=RegisterSerializer,
+        responses={
+            201: OpenApiResponse(description="User registered successfully"),
+            400: OpenApiResponse(description="Validation error"),
+        }
+    )
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -31,6 +38,14 @@ class RegisterView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(
+    request=CustomTokenObtainPairSerializer,
+    responses={
+        200: OpenApiResponse(description="Login berhasil, JWT token dikembalikan"),
+        400: OpenApiResponse(description="Input salah"),
+        404: OpenApiResponse(description="Akun tidak ditemukan"),
+    }
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):

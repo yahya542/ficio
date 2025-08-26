@@ -7,10 +7,17 @@ from rest_framework.response import Response
 from ..models import Kapal, JenisIkan
 import io
 from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes, OpenApiRequest
+from ..serializers.dummy import CSVUploadSchema
 
 def is_admin_request(request):
     return request.user.is_authenticated and request.user.role == 'admin'
 
+
+@extend_schema(
+    request=CSVUploadSchema,
+    responses={201: dict}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_kapal_csv(request):
@@ -92,6 +99,11 @@ def import_kapal_csv(request):
         "skipped_items": skipped_items
     }, status=status.HTTP_201_CREATED)
 
+
+@extend_schema(
+    request=CSVUploadSchema,
+    responses={201: dict}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_jenis_ikan_csv(request):

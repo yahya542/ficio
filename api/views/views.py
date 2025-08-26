@@ -7,10 +7,19 @@ from ..models import Kapal, TangkapanIkan, Profile, KuotaKapal
 from ..serializers.serializers import KapalSerializer, InputTangkapanSerializer, JenisIkanSerializer, WPPSerializer
 from ..permissions import RolePermissionFactory, RolePermissionFactory
 from django.db.models import Sum
+from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes
 
 def is_admin_request(request):
     return request.user.is_authenticated and request.user.role == 'admin'
 
+
+
+@extend_schema(
+    summary="Input data kapal baru",
+    description="Hanya role `pemilik_kapal` dan `admin` yang boleh input kapal.",
+    request=KapalSerializer,
+    responses={201: KapalSerializer},
+)
 
 
 @api_view(['POST'])
@@ -29,7 +38,11 @@ def input_kapal(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+@extend_schema(
+    summary="Daftar kapal",
+    description="Admin, auditor, regulator bisa lihat semua kapal. Pemilik/nahkoda hanya lihat kapal mereka.",
+    responses={200: KapalSerializer(many=True)},
+)
 @api_view(['GET'])
 @permission_classes([RolePermissionFactory('list_kapal')])
 def list_kapal(request):
@@ -39,6 +52,18 @@ def list_kapal(request):
         kapal = Kapal.objects.filter(profiles__user=request.user)
     serializer = KapalSerializer(kapal, many=True)
     return Response(serializer.data)
+
+@extend_schema(
+    summary="Input batch tangkapan ikan",
+    description="Hanya role `admin` yang boleh input batch tangkapan ikan.",
+    request=InputTangkapanSerializer,
+    responses={
+        201: OpenApiResponse(description="Berhasil simpan tangkapan"),
+        400: OpenApiResponse(description="Validasi gagal"),
+        403: OpenApiResponse(description="Unauthorized")
+    },
+)
+
 @api_view(['POST'])
 @permission_classes([RolePermissionFactory('input_tangkapan')])
 def input_tangkapan_batch(request):
@@ -85,15 +110,22 @@ def input_tangkapan_batch(request):
 
 
 
-
+@extend_schema(
+    summary="Daftar jenis ikan",
+    responses={200: JenisIkanSerializer(many=True)},
+)
 @api_view(['GET'])
-@permission_classes([RolePermissionFactory('list_jenis_ikan')])
+@permission_classes([IsAuthenticated])
 def list_jenis_ikan(request):
     ikan = JenisIkanSerializer.Meta.model.objects.all()
     serializer = JenisIkanSerializer(ikan, many=True)
     return Response(serializer.data)
 
 
+@extend_schema(
+    summary="Daftar WPP (Wilayah Pengelolaan Perikanan)",
+    responses={200: WPPSerializer(many=True)},
+)
 @api_view(['GET'])
 @permission_classes([RolePermissionFactory('list_wpp')])
 def list_wpp(request):
@@ -101,7 +133,22 @@ def list_wpp(request):
     serializer = WPPSerializer(wpp, many=True)
     return Response(serializer.data)
 
-
+@extend_schema(
+    summary="Riwayat tangkapan kapal",
+    description=(
+        "Admin/auditor/regulator harus menyertakan `no_buku_kapal` di body POST. "
+        "Pemilik/nahkoda otomatis ambil dari kapal miliknya."
+    ),
+    parameters=[
+        # kamu bisa tambahkan parameter eksplisit di sini kalau mau
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiResponse(description="Input salah"),
+        403: OpenApiResponse(description="Unauthorized"),
+        404: OpenApiResponse(description="Kapal/tangkapan tidak ditemukan")
+    },
+)
 @api_view(['GET', 'POST'])
 @permission_classes([RolePermissionFactory('kapal_history')])
 def kapal_history(request, no_buku_kapal=None):

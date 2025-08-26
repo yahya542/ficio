@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist', 
     'corsheaders',
     'api',
-    'drf_yasg',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -162,17 +162,11 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
         'rest_framework.parsers.FormParser',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
 }
 
 
-# Authentication settings
-""" LOGIN_URL = reverse_lazy('login')
-LOGIN_REDIRECT_URL = reverse_lazy('dashboard')
-LOGOUT_REDIRECT_URL = reverse_lazy('login')  """
-
-LOGIN_URL = '/swagger/'
-LOGIN_REDIRECT_URL = '/swagger/'
-LOGOUT_REDIRECT_URL = '/swagger/'
 
 
 # Default primary key field type
@@ -183,3 +177,9 @@ ADMIN_API_KEY = "rahasia_admin_123"
 AUTH_USER_MODEL = 'api.CustomUser'
 
 
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Sistem Kapal API",
+    "DESCRIPTION": "Dokumentasi API untuk kapal, tangkapan, auth, dan kuota",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}

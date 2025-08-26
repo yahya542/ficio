@@ -2,11 +2,11 @@ from rest_framework.permissions import BasePermission
 
 ROLE_ACCESS = {
     'admin': ['lihat_kapal', 'input_kapal', 'input_tangkapan', 'list_jenis_ikan', 'list_wpp', 'kapal_history'],
-    'pemilik_kapal': ['lihat_kapal', 'register', 'login', 'kapal_history'],
+    'pemilik': ['lihat_kapal', 'register', 'login', 'kapal_history'],
     'nahkoda': ['lihat_kapal', 'register', 'login', 'kapal_history'],
     'auditor': ['lihat_kapal', 'kapal_history'],
     'regulator': ['lihat_kapal', 'kelola_kuota', 'kapal_history'],
-    'super_admin': ['manage_roles', 'update_permission'],
+    'super_user': ['manage_roles', 'update_permission'],
 }
 
 # Untuk endpoint satu method / tanpa parameter

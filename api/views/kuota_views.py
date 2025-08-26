@@ -4,6 +4,7 @@ from rest_framework import status, permissions
 from ..models import KuotaKapal, Kapal
 from rest_framework.serializers import Serializer, CharField, FloatField, ValidationError
 from ..serializers.kuota_serializer import KuotaKapalInputSerializer
+from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes
 
 
 
@@ -16,6 +17,11 @@ class IsRegulator(permissions.BasePermission):
 class AturKuotaKapalView(APIView):
     permission_classes = [IsRegulator]
 
+    @extend_schema(
+        summary="Atur kuota kapal",
+        request=KuotaKapalInputSerializer,
+        responses=None  # output tidak ditampilkan
+    )
     def post(self, request):
         serializer = KuotaKapalInputSerializer(data=request.data)
         if serializer.is_valid():
