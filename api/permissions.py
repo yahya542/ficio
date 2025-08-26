@@ -1,20 +1,28 @@
-# permissions.py
 from rest_framework.permissions import BasePermission
 
 ROLE_ACCESS = {
-    'admin': ['*'],  # semua endpoint
-    'pemilik_kapal': ['lihat_kapal', 'lihat_tangkapan', 'register', 'login'],
-    'nahkoda': ['lihat_kapal', 'lihat_tangkapan', 'register', 'login'],
-    'auditor': ['lihat_kapal', 'lihat_tangkapan'],
-    'regulator': ['lihat_kapal', 'lihat_tangkapan', 'kelola_kuota'],
+    'admin': ['lihat_kapal', 'input_kapal', 'input_tangkapan', 'list_jenis_ikan', 'list_wpp', 'kapal_history'],
+    'pemilik_kapal': ['lihat_kapal', 'register', 'login', 'kapal_history'],
+    'nahkoda': ['lihat_kapal', 'register', 'login', 'kapal_history'],
+    'auditor': ['lihat_kapal', 'kapal_history'],
+    'regulator': ['lihat_kapal', 'kelola_kuota', 'kapal_history'],
+    'super_admin': ['manage_roles', 'update_permission'],
 }
 
+# Untuk endpoint satu method / tanpa parameter
 class RolePermission(BasePermission):
-    def __init__(self, endpoint_name):
-        self.endpoint_name = endpoint_name
-
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         allowed = ROLE_ACCESS.get(request.user.role, [])
-        return '*' in allowed or (self.endpoint_name and self.endpoint_name in allowed)
+        return '*' in allowed or view.basename in allowed  # atau cek nama view default
+
+# Untuk endpoint yang butuh parameter khusus (factory)
+def RolePermissionFactory(endpoint_name):
+    class _RolePermission(BasePermission):
+        def has_permission(self, request, view):
+            if not request.user.is_authenticated:
+                return False
+            allowed = ROLE_ACCESS.get(request.user.role, [])
+            return '*' in allowed or (endpoint_name in allowed)
+    return _RolePermission

@@ -11,9 +11,6 @@ from django.db import IntegrityError
 def is_admin_request(request):
     return request.user.is_authenticated and request.user.role == 'admin'
 
-
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_kapal_csv(request):
@@ -48,7 +45,7 @@ def import_kapal_csv(request):
         "nama_kapal": ["nama kapal", "nama_kapal", "nama"]
     }
 
-    for row in reader:
+    for idx, row in enumerate(reader, start=2):  # start=2 karena baris header
         # Buat key CSV case-insensitive
         row_lower = {k.strip().lower(): v.strip() for k, v in row.items()}
         data = {}
@@ -65,14 +62,11 @@ def import_kapal_csv(request):
 
         if not nomor or not nama:
             skipped += 1
-            skipped_items.append({"row": reader.line_num, "reason": "missing_field"})
+            skipped_items.append({"row": idx, "reason": "missing_field"})
+            print(f"Baris {idx}: dilewati (missing field) → {row}")
             continue
 
-        print("Row CSV:", row)
-        print("Mapped data:", data)
-        print("Nomor:", nomor, "Nama:", nama)
-
-        # Gunakan get_or_create untuk mencegah IntegrityError
+        # Gunakan get_or_create untuk mencegah duplikat
         try:
             obj, created_flag = Kapal.objects.get_or_create(
                 no_buku_kapal=nomor,
@@ -80,13 +74,17 @@ def import_kapal_csv(request):
             )
             if created_flag:
                 created += 1
+                print(f"Baris {idx}: berhasil dibuat → Nomor: {nomor}, Nama: {nama}")
             else:
                 skipped += 1
-                skipped_items.append(nomor)
+                skipped_items.append({"row": idx, "reason": "duplicate", "no_buku_kapal": nomor})
+                print(f"Baris {idx}: dilewati (duplikat) → Nomor: {nomor}, Nama: {nama}")
         except Exception as e:
             skipped += 1
-            skipped_items.append(nomor or f"error: {str(e)}")
+            skipped_items.append({"row": idx, "reason": f"error: {str(e)}", "no_buku_kapal": nomor})
+            print(f"Baris {idx}: dilewati (error) → Nomor: {nomor}, Nama: {nama}, Error: {str(e)}")
 
+    print(f"Import selesai: {created} dibuat, {skipped} dilewati")
     return Response({
         "status": "success",
         "created": created,
@@ -94,38 +92,38 @@ def import_kapal_csv(request):
         "skipped_items": skipped_items
     }, status=status.HTTP_201_CREATED)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_jenis_ikan_csv(request):
-    # Validasi hanya admin
     if not is_admin_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
-    # Validasi file
     file = request.FILES.get("file")
     if not file:
         return Response({"detail": "CSV file is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Baca file CSV
-    decoded_file = file.read().decode("utf-8")
+    decoded_file = file.read().decode("utf-8-sig")  # handle BOM
     io_string = io.StringIO(decoded_file)
     reader = csv.DictReader(io_string)
 
     created, skipped = 0, 0
-    for row in reader:
+    for idx, row in enumerate(reader, start=2):  # start=2 karena baris header
         nama = row.get("nama")
         if not nama:
-            continue  # skip baris kosong
+            skipped += 1
+            print(f"Baris {idx}: dilewati (missing 'nama')")
+            continue
 
-        # Validasi unik
         if JenisIkan.objects.filter(nama__iexact=nama).exists():
             skipped += 1
+            print(f"Baris {idx}: dilewati (duplikat) → {nama}")
             continue
 
         JenisIkan.objects.create(nama=nama)
         created += 1
+        print(f"Baris {idx}: berhasil dibuat → {nama}")
 
+    print(f"Import selesai: {created} dibuat, {skipped} dilewati")
     return Response({
         "message": "Import selesai",
         "created": created,

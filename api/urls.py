@@ -10,7 +10,7 @@ urlpatterns = [
 
     # Tangkapan
     path('tangkapan/input/', views.input_tangkapan_batch, name='input_tangkapan_batch'),
-    path('tangkapan/list/', views.list_tangkapan, name='list_tangkapan'),
+   
 
     # Master Data
     path('master/jenis-ikan/', views.list_jenis_ikan, name='list_jenis_ikan'),
