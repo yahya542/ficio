@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from ..models import Kapal, JenisIkan, WPP, TangkapanIkan, CustomUser, KuotaKapal
-
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.openapi import OpenApiTypes
 
 
 class JenisIkanSerializer(serializers.ModelSerializer):
@@ -22,20 +23,21 @@ class KapalSerializer(serializers.ModelSerializer):
         model = Kapal
         fields = ['id', 'nama_kapal', 'no_buku_kapal', 'no_buku_kapal', 'pemilik']
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_pemilik(self, obj):
         profile = obj.profiles.filter(role='pemilik_kapal').first()
         return profile.user.username if profile else None
 
 
 class TangkapanIkanSerializer(serializers.Serializer):
-    jenis_ikan_id = serializers.IntegerField()
-    berat = serializers.FloatField()
-    wpp_id = serializers.IntegerField()
+    jenis_ikan_id = serializers.IntegerField(help_text="ID of the fish type")
+    berat = serializers.FloatField(help_text="Weight in kilograms")
+    wpp_id = serializers.IntegerField(help_text="ID of the Fisheries Management Area (WPP)")
 
 
 class InputTangkapanSerializer(serializers.Serializer):
-    no_buku_kapal = serializers.CharField()
-    tangkapan = serializers.ListField()
+    no_buku_kapal = serializers.CharField(help_text="Ship registration number")
+    tangkapan = serializers.ListField(child=TangkapanIkanSerializer(), help_text="List of fish catches")
 
     def validate_no_buku_kapal(self, value):
         if not Kapal.objects.filter(no_buku_kapal=value).exists():

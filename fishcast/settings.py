@@ -88,9 +88,9 @@ WSGI_APPLICATION = 'fishcast.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_ficio',
-        'USER': 'db_user',
-        'PASSWORD': 'ficio_123',
+        'NAME': 'ficio',
+        'USER': 'postgres',
+        'PASSWORD': 'rahasia',
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -178,8 +178,32 @@ AUTH_USER_MODEL = 'api.CustomUser'
 
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Sistem Kapal API",
-    "DESCRIPTION": "Dokumentasi API untuk kapal, tangkapan, auth, dan kuota",
+    "TITLE": "Fisheries Blockchain Supply Chain API",
+    "DESCRIPTION": """
+Dokumentasi API untuk aplikasi blockchain fokus pada supply chain perikanan.
+
+## Fitur Utama:
+1. **Pelaporan Data Penangkapan Ikan** - Nelayan dapat melaporkan data penangkapan ikan
+2. **Penentuan Kuota Penangkapan** - Pihak berwenang dapat menentukan kuota penangkapan untuk setiap kapal
+3. **Blockchain Integration** - Data penangkapan dan kuota disimpan dalam blockchain untuk transparansi
+
+## Arsitektur Blockchain:
+- Data penangkapan ikan disimpan dalam blockchain untuk memastikan integritas dan transparansi
+- Setiap transaksi penangkapan akan diverifikasi dan dicatat dalam ledger terdistribusi
+- Kuota penangkapan dapat dilacak dan diverifikasi oleh semua pihak terkait
+
+## Role Pengguna:
+- **admin** - Mengelola data master dan import data
+- **pemilik_kapal** - Melaporkan data penangkapan ikan
+- **nahkoda** - Melaporkan data penangkapan ikan
+- **regulator** - Menentukan kuota penangkapan
+- **auditori** - Mengaudit data penangkapan dan kuota
+""",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": "/api/",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "RoleEnum": "api.models.CustomUser.ROLE_CHOICES",
+    },
 }

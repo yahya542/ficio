@@ -4,16 +4,16 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from ..models import CustomUser, Kapal, Profile
 from rest_framework import serializers
 from ..models import CustomUser, Kapal, Profile, WPP
-
-
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.openapi import OpenApiTypes
 
 
 
 
 # Serializer untuk Login + Custom Response
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, write_only=True)
+    username = serializers.CharField(required=True, help_text="Username or ship registration number")
+    password = serializers.CharField(required=True, write_only=True, help_text="User password")
     def validate(self, attrs):
         data = super().validate(attrs)
 
@@ -42,14 +42,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         ('regulator', 'Regulator'),
     ]
 
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=ROLE_CHOICES)
+    email = serializers.EmailField(required=True, help_text="User email address")
+    password = serializers.CharField(write_only=True, help_text="User password")
+    role = serializers.ChoiceField(choices=ROLE_CHOICES, help_text="User role in the system")
     
     # hanya wajib untuk role kapal
-    no_buku_kapal = serializers.CharField(write_only=True, required=False)
-    nama_kapal = serializers.CharField(write_only=True, required=False)
-    wpp_code = serializers.CharField(write_only=True, required=False)
+    no_buku_kapal = serializers.CharField(write_only=True, required=False, help_text="Ship registration number (required for ship owner/captain)")
+    nama_kapal = serializers.CharField(write_only=True, required=False, help_text="Ship name (required for ship owner)")
+    wpp_code = serializers.CharField(write_only=True, required=False, help_text="Fisheries Management Area code (required for ship owner)")
 
     class Meta:
         model = CustomUser
