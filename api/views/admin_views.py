@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
-from ..models import Kapal, JenisIkan
+from ..models import Kapal, JenisIkan, WPP
 import io
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes, OpenApiRequest
@@ -119,6 +119,11 @@ def import_jenis_ikan_csv(request):
     reader = csv.DictReader(io_string)
 
     created, skipped = 0, 0
+    field_map = {
+        "code": ["wpp_code", "code", "kode", "kode_wpp"],   # field di model: code
+        "name": ["name", "nama", "wilayah", "nama_wpp"],    # field di model: name
+    }
+
     for idx, row in enumerate(reader, start=2):  # start=2 karena baris header
         nama = row.get("nama")
         if not nama:
@@ -140,4 +145,83 @@ def import_jenis_ikan_csv(request):
         "message": "Import selesai",
         "created": created,
         "skipped": skipped
+    }, status=status.HTTP_201_CREATED)
+
+@extend_schema(
+    request=CSVUploadSchema,
+    responses={201: dict}
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_wpp_csv(request):
+    if not is_admin_request(request):
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    file = request.FILES.get("file")
+    if not file:
+        return Response({"detail": "CSV file is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        decoded_file = file.read().decode("utf-8-sig")  # handle BOM & UTF-8
+        io_string = io.StringIO(decoded_file)
+        reader = csv.DictReader(io_string)
+    except Exception as e:
+        return Response(
+            {"detail": f"Gagal membaca file CSV: {str(e)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    created, skipped = 0, 0
+    skipped_items = []
+
+    # Mapping header CSV ke field model
+    field_map = {
+        "code": ["wpp_code", "code", "kode", "kode_wpp"],
+        "name": ["name", "nama", "wilayah", "nama_wpp"],
+    }
+
+    for idx, row in enumerate(reader, start=2):  # start=2 karena baris header
+        # Normalisasi key agar case-insensitive
+        row_lower = {k.strip().lower(): v.strip() for k, v in row.items() if k and v}
+        data = {}
+
+        # Ambil value sesuai mapping
+        for field, headers in field_map.items():
+            for h in headers:
+                if h.lower() in row_lower and row_lower[h.lower()]:
+                    data[field] = row_lower[h.lower()]
+                    break
+
+        code = data.get("code")
+        name = data.get("name")
+
+        if not code or not name:
+            skipped += 1
+            skipped_items.append({"row": idx, "reason": "missing_field", "data": row})
+            print(f"Baris {idx}: dilewati (missing field) → {row}")
+            continue
+
+        try:
+            obj, created_flag = WPP.objects.get_or_create(
+                code=code,
+                defaults={"name": name}
+            )
+            if created_flag:
+                created += 1
+                print(f"Baris {idx}: berhasil dibuat → {code} - {name}")
+            else:
+                skipped += 1
+                skipped_items.append({"row": idx, "reason": "duplicate", "code": code})
+                print(f"Baris {idx}: dilewati (duplikat) → {code}")
+        except Exception as e:
+            skipped += 1
+            skipped_items.append({"row": idx, "reason": f"error: {str(e)}", "code": code})
+            print(f"Baris {idx}: dilewati (error) → {code}, Error: {str(e)}")
+
+    print(f"Import WPP selesai: {created} dibuat, {skipped} dilewati")
+    return Response({
+        "message": "Import WPP selesai",
+        "created": created,
+        "skipped": skipped,
+        "skipped_items": skipped_items
     }, status=status.HTTP_201_CREATED)

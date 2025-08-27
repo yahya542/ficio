@@ -25,6 +25,7 @@ urlpatterns = [
     # Admin Views
     path("import/kapal/", admin.import_kapal_csv, name="import_kapal"),
     path("import/jenis-ikan/", admin.import_jenis_ikan_csv, name="import_jenis_ikan"),
+    path("import/wpp/", admin.import_wpp_csv, name="import_wpp"),
 
     #regulator 
     path("input/kuota/", kuota.AturKuotaKapalView.as_view(), name="import_kuota")
