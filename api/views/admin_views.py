@@ -70,7 +70,7 @@ def import_kapal_csv(request):
         if not nomor or not nama:
             skipped += 1
             skipped_items.append({"row": idx, "reason": "missing_field"})
-            print(f"Baris {idx}: dilewati (missing field) → {row}")
+            print(f"Baris {idx}: dilewati (missing field) = {row}")
             continue
 
         # Gunakan get_or_create untuk mencegah duplikat
@@ -81,15 +81,15 @@ def import_kapal_csv(request):
             )
             if created_flag:
                 created += 1
-                print(f"Baris {idx}: berhasil dibuat → Nomor: {nomor}, Nama: {nama}")
+                print(f"Baris {idx}: berhasil dibuat = Nomor: {nomor}, Nama: {nama}")
             else:
                 skipped += 1
                 skipped_items.append({"row": idx, "reason": "duplicate", "no_buku_kapal": nomor})
-                print(f"Baris {idx}: dilewati (duplikat) → Nomor: {nomor}, Nama: {nama}")
+                print(f"Baris {idx}: dilewati (duplikat) = Nomor: {nomor}, Nama: {nama}")
         except Exception as e:
             skipped += 1
             skipped_items.append({"row": idx, "reason": f"error: {str(e)}", "no_buku_kapal": nomor})
-            print(f"Baris {idx}: dilewati (error) → Nomor: {nomor}, Nama: {nama}, Error: {str(e)}")
+            print(f"Baris {idx}: dilewati (error) = Nomor: {nomor}, Nama: {nama}, Error: {str(e)}")
 
     print(f"Import selesai: {created} dibuat, {skipped} dilewati")
     return Response({
@@ -133,12 +133,12 @@ def import_jenis_ikan_csv(request):
 
         if JenisIkan.objects.filter(nama__iexact=nama).exists():
             skipped += 1
-            print(f"Baris {idx}: dilewati (duplikat) → {nama}")
+            print(f"Baris {idx}: dilewati (duplikat) = {nama}")
             continue
 
         JenisIkan.objects.create(nama=nama)
         created += 1
-        print(f"Baris {idx}: berhasil dibuat → {nama}")
+        print(f"Baris {idx}: berhasil dibuat = {nama}")
 
     print(f"Import selesai: {created} dibuat, {skipped} dilewati")
     return Response({
@@ -198,7 +198,7 @@ def import_wpp_csv(request):
         if not code or not name:
             skipped += 1
             skipped_items.append({"row": idx, "reason": "missing_field", "data": row})
-            print(f"Baris {idx}: dilewati (missing field) → {row}")
+            print(f"Baris {idx}: dilewati (missing field) = {row}")
             continue
 
         try:
@@ -208,15 +208,15 @@ def import_wpp_csv(request):
             )
             if created_flag:
                 created += 1
-                print(f"Baris {idx}: berhasil dibuat → {code} - {name}")
+                print(f"Baris {idx}: berhasil dibuat = {code} - {name}")
             else:
                 skipped += 1
                 skipped_items.append({"row": idx, "reason": "duplicate", "code": code})
-                print(f"Baris {idx}: dilewati (duplikat) → {code}")
+                print(f"Baris {idx}: dilewati (duplikat) = {code}")
         except Exception as e:
             skipped += 1
             skipped_items.append({"row": idx, "reason": f"error: {str(e)}", "code": code})
-            print(f"Baris {idx}: dilewati (error) → {code}, Error: {str(e)}")
+            print(f"Baris {idx}: dilewati (error) = {code}, Error: {str(e)}")
 
     print(f"Import WPP selesai: {created} dibuat, {skipped} dilewati")
     return Response({
