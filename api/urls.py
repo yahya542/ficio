@@ -8,6 +8,7 @@ urlpatterns = [
     # Kapal
     path('kapal/input/', views.input_kapal, name='input_kapal'),
     path('list-kapal/', views.list_kapal, name='list_kapal'),
+    path('list-kapal/<int:pk>/', views.detail_kapal, name='detail_kapal'),
 
     # Tangkapan
     path('tangkapan/input/', views.input_tangkapan_batch, name='input_tangkapan_batch'),

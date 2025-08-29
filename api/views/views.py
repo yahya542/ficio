@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
-from ..models import Kapal, TangkapanIkan, Profile, KuotaKapal
+from ..models import Kapal, TangkapanIkan, Profile, KuotaKapal, CustomUser
 from ..serializers.serializers import KapalSerializer, InputTangkapanSerializer, JenisIkanSerializer, WPPSerializer
 from ..permissions import RolePermissionFactory, RolePermissionFactory
 from django.db.models import Sum
@@ -11,6 +11,9 @@ from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes
 from rest_framework.permissions import AllowAny
 from django.http import JsonResponse
 from django.contrib.auth.models import AnonymousUser
+
+
+
 
 
 def is_admin_request(request):
@@ -47,26 +50,57 @@ def input_kapal(request):
     description="Admin, auditor, regulator bisa lihat semua kapal. Pemilik/nahkoda hanya lihat kapal mereka.",
     responses={200: KapalSerializer(many=True)},
 )
+
+
 @api_view(['GET'])
 @permission_classes([])
 def list_kapal(request):
     kapal_list = Kapal.objects.all()
     data = []
     for kapal in kapal_list:
-        kuota_obj = kapal.alokasi_kuota.first()  # ambil kuota pertama
         data.append({
-            "id": kapal.id,
-            "nama": kapal.nama_kapal,
-            "no_buku_kapal": kapal.no_buku_kapal,
-            "kuota": kuota_obj.kuota if kuota_obj else 0,
-            "kuota_terpakai": kuota_obj.kuota_terpakai if kuota_obj else 0,
-            "sisa_kuota": kuota_obj.sisa_kuota if kuota_obj else 0,
+            'id': kapal.id,
+            'nama': kapal.nama_kapal,
+            'no_buku_kapal': kapal.no_buku_kapal
         })
-    # **Pastikan ada return Response**
+
     return Response(data)
 
 
+@api_view(['GET'])
+@permission_classes([])  # kalau mau tanpa auth
+def detail_kapal(request, pk):
+    try:
+        kapal = Kapal.objects.get(id=pk)
+    except Kapal.DoesNotExist:
+        return Response({'error': 'Kapal tidak ditemukan'}, status=404)
 
+    pemilik = Profile.objects.filter(kapal=kapal, role__in=['pemilik', 'pemilik_kapal']).select_related('user').first()
+    kuota_kapal = KuotaKapal.objects.filter(kapal=kapal).first()
+    history = TangkapanIkan.objects.filter(kapal=kapal).select_related('jenis_ikan', 'location')
+
+    data = {
+        'id': kapal.id,
+        'nama': kapal.nama_kapal,
+        'kuota': {
+            'kuota': kuota_kapal.kuota if kuota_kapal else 0,
+            'kuota_terpakai': kuota_kapal.kuota_terpakai if kuota_kapal else 0,
+            'sisa_kuota': kuota_kapal.sisa_kuota if kuota_kapal else 0,
+        },
+        'pemilik': {
+            'nama': pemilik.user.username if pemilik else '',
+            'alamat': pemilik.user.email if pemilik else ''
+        },
+        
+        'history': [
+            {
+                'tanggal': h.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'deskripsi': f"Tangkapan {h.jenis_ikan.nama} seberat {h.weight} kg di lokasi {h.location.name}"
+            } for h in history
+        ]
+    }
+
+    return Response(data)
 
 @extend_schema(
     summary="Input batch tangkapan ikan",
