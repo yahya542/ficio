@@ -97,3 +97,16 @@ def login(request):
         }
     })
 
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh")  # refresh token wajib dikirim dari frontend
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"message": "Logout berhasil, token di-blacklist"}, status=status.HTTP_205_RESET_CONTENT)
+        except TokenError:
+            return Response({"error": "Token tidak valid atau sudah kadaluarsa"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -7,7 +7,7 @@ from drf_spectacular.views import (
 )
 from django.http import FileResponse
 import os
-from api.views.auth_views import login, RegisterView  
+from api.views.auth_views import login, RegisterView, LogoutView
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -23,6 +23,7 @@ urlpatterns = [
     # Auth
     path("register/", RegisterView.as_view(), name="register"), 
     path("login/", login, name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
 
     # Django Admin
     path("admin/", admin.site.urls),
