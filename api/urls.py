@@ -2,6 +2,7 @@ from django.urls import path
 from .views import views
 from .views import admin_views as admin
 from .views import kuota_views as kuota
+from .permissions import manage_access, list_access
 
 urlpatterns = [
     # Kapal
@@ -28,5 +29,11 @@ urlpatterns = [
     path("import/wpp/", admin.import_wpp_csv, name="import_wpp"),
 
     #regulator 
-    path("input/kuota/", kuota.AturKuotaKapalView.as_view(), name="import_kuota")
+    path("input/kuota/", kuota.AturKuotaKapalView.as_view(), name="import_kuota"),
+
+    #superuser 
+    path("atur/akses/", manage_access, name="atur_akses"), 
+    path("lihat/akses/", list_access, name="lihat_akses"),
+
+
 ]

@@ -70,9 +70,10 @@
 
 # register admin # 
 {
-    username='admin1',
-    password='rahasia123',
-    email='admin@example.com'
+    "username":"admin1",
+    "password":"rahasia123",
+    "email":"admin@example.com",
+    "role":"admin"
 }
 
 # login admin # 
@@ -96,11 +97,12 @@
 # register regulator atau auditori # 
 
     {
-    "username": "regulator1", --ganti auditori jika auditori
-    "email": "regulator123@email.com", --//--
-    "password": "rahasia123", --//--
-    "role": "regulator" -- ganti auditori 
+    "username": "regulator1", 
+    "email": "regulator123@email.com", 
+    "password": "rahasia123", 
+    "role": "regulator" 
     }
+    <!-- ganti auditori jika sebagaiauditori -->
 
     #response untuk auditori : {
         "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1NjIwNDc3OCwiaWF0IjoxNzU1NTk5OTc4LCJqdGkiOiJlNTdlYTQ1MTdmMDk0MGY5YjBlZjY1OWU2ZjA0YWZlYSIsInVzZXJfaWQiOiIxMCJ9.pfRkwTymTGt6KCRLrdP3rOBT_u97wJyzMFAKGI65nyw",
@@ -158,7 +160,7 @@
     "no_buku_kapal": "BK23456",
     "tangkapan": [
         {
-        "jenis_ikan_id": 27, #27-36
+        "jenis_ikan_id": 27, 
         "berat": 150.5,
         "jumlah": 50,
         "wpp_id": 712
@@ -262,3 +264,6 @@
 
 
 
+# super user #
+    Username: super_user
+    Email: sajakcodingan@gamil.com
