@@ -8,6 +8,10 @@ from ..serializers.serializers import KapalSerializer, InputTangkapanSerializer,
 from ..permissions import RolePermissionFactory, RolePermissionFactory
 from django.db.models import Sum
 from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes
+from rest_framework.permissions import AllowAny
+from django.http import JsonResponse
+from django.contrib.auth.models import AnonymousUser
+
 
 def is_admin_request(request):
     return request.user.is_authenticated and request.user.role == 'admin'
@@ -44,14 +48,37 @@ def input_kapal(request):
     responses={200: KapalSerializer(many=True)},
 )
 @api_view(['GET'])
-@permission_classes([RolePermissionFactory('list_kapal')])
+@permission_classes([AllowAny])
 def list_kapal(request):
-    if request.user.role in ['admin', 'auditori', 'regulator']:
-        kapal = Kapal.objects.all()
+    user = request.user
+
+    # aman untuk AnonymousUser
+    if isinstance(user, AnonymousUser):
+        role = None
     else:
-        kapal = Kapal.objects.filter(profiles__user=request.user)
-    serializer = KapalSerializer(kapal, many=True)
-    return Response(serializer.data)
+        role = getattr(user, 'role', None)
+
+    # query kapal dari database
+    if role == 'pemilik':
+        kapal_list = Kapal.objects.filter(owner=user)  # misal kapal milik pemilik
+    else:
+        kapal_list = Kapal.objects.all()  # tampilkan semua kapal untuk umum
+
+    # ubah queryset ke list dict agar bisa dijadikan JSON
+    data = []
+    for kapal in kapal_list:
+        data.append({
+            "id": kapal.id,
+            "nama": kapal.nama_kapal,
+
+            # tambahkan field lain sesuai kebutuhan
+        })
+
+    return JsonResponse({"kapal": data})
+
+
+
+
 
 @extend_schema(
     summary="Input batch tangkapan ikan",
