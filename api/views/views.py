@@ -50,33 +50,20 @@ def input_kapal(request):
 @api_view(['GET'])
 @permission_classes([])
 def list_kapal(request):
-    user = request.user
-
-    # aman untuk AnonymousUser
-    if isinstance(user, AnonymousUser):
-        role = None
-    else:
-        role = getattr(user, 'role', None)
-
-    # query kapal dari database
-    if role == 'pemilik':
-        kapal_list = Kapal.objects.filter(owner=user)  # misal kapal milik pemilik
-    else:
-        kapal_list = Kapal.objects.all()  # tampilkan semua kapal untuk umum
-
-    # ubah queryset ke list dict agar bisa dijadikan JSON
+    kapal_list = Kapal.objects.all()
     data = []
     for kapal in kapal_list:
+        kuota_obj = kapal.alokasi_kuota.first()  # ambil kuota pertama
         data.append({
             "id": kapal.id,
             "nama": kapal.nama_kapal,
             "no_buku_kapal": kapal.no_buku_kapal,
-
-            # tambahkan field lain sesuai kebutuhan
+            "kuota": kuota_obj.kuota if kuota_obj else 0,
+            "kuota_terpakai": kuota_obj.kuota_terpakai if kuota_obj else 0,
+            "sisa_kuota": kuota_obj.sisa_kuota if kuota_obj else 0,
         })
-
-    return JsonResponse({"kapal": data})
-
+    # **Pastikan ada return Response**
+    return Response(data)
 
 
 
