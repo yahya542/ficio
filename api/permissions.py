@@ -5,13 +5,13 @@ from api.models import CustomUser as User
 
 ROLE_ACCESS = {
     'admin': [
-        '', 'input_kapal', 'input_tangkapan',
+        'list_kapal', 'input_kapal', 'input_tangkapan',
         'list_jenis_ikan', 'list_wpp', 'kapal_history'
     ],
     'pemilik': ['', 'register', 'login', 'kapal_history'],
     'nahkoda': ['', 'register', 'login', 'kapal_history'],
     'auditor': ['', 'kapal_history'],
-    'regulator': ['', 'kelola_kuota', 'kapal_history'],
+    'regulator': ['list_kapal', 'kelola_kuota', 'kapal_history'],
     'super_user': ['manage_roles', 'update_permission'],
 }
 

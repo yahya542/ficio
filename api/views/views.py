@@ -48,7 +48,7 @@ def input_kapal(request):
     responses={200: KapalSerializer(many=True)},
 )
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([])
 def list_kapal(request):
     user = request.user
 
@@ -70,6 +70,7 @@ def list_kapal(request):
         data.append({
             "id": kapal.id,
             "nama": kapal.nama_kapal,
+            "no_buku_kapal": kapal.no_buku_kapal,
 
             # tambahkan field lain sesuai kebutuhan
         })
@@ -92,7 +93,7 @@ def list_kapal(request):
 )
 
 @api_view(['POST'])
-@permission_classes([RolePermissionFactory('input_tangkapan')])
+@permission_classes([RolePermissionFactory('list_kapal')])
 def input_tangkapan_batch(request):
     if not is_admin_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
