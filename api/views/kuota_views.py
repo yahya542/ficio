@@ -1,36 +1,27 @@
-from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework import status, permissions
-from ..models import KuotaKapal, Kapal
-from rest_framework.serializers import Serializer, CharField, FloatField, ValidationError
+from rest_framework import status
 from ..serializers.kuota_serializer import KuotaKapalInputSerializer
-from drf_spectacular.utils import extend_schema,OpenApiResponse, OpenApiTypes
+from ..permissions import RolePermissionFactory
+from drf_spectacular.utils import extend_schema
 
 
-
-# Permission khusus regulator
-class IsRegulator(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'regulator'
-
-# APIView untuk mengatur kuota kapal
-class AturKuotaKapalView(APIView):
-    permission_classes = [IsRegulator]
-
-    @extend_schema(
-        summary="Atur kuota kapal",
-        request=KuotaKapalInputSerializer,
-        responses=None  # output tidak ditampilkan
-    )
-    def post(self, request):
-        serializer = KuotaKapalInputSerializer(data=request.data)
-        if serializer.is_valid():
-            kuota = serializer.save()
-            return Response({
-                "message": "Kuota total kapal berhasil diatur",
-                "no_buku_kapal": kuota.kapal.no_buku_kapal,
-                "kuota": kuota.kuota,
-                "kuota_terpakai": kuota.kuota_terpakai,
-                "sisa_kuota": kuota.sisa_kuota
-            }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@extend_schema(
+    summary="Atur kuota kapal",
+    request=KuotaKapalInputSerializer,
+    responses=None
+)
+@api_view(['POST'])
+@permission_classes([RolePermissionFactory('kelola_kuota')])
+def atur_kuota_kapal(request):
+    serializer = KuotaKapalInputSerializer(data=request.data)
+    if serializer.is_valid():
+        kuota = serializer.save()
+        return Response({
+            "message": "Kuota  kapal berhasil diatur",
+            "no_buku_kapal": kuota.kapal.no_buku_kapal,
+            "kuota": kuota.kuota,
+            "kuota_terpakai": kuota.kuota_terpakai,
+            "sisa_kuota": kuota.sisa_kuota
+        }, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
